@@ -8,6 +8,8 @@
 <title>Quest Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --ink:#1B1A2A; --panel:#26243A; --panel-light:#322F4C;
@@ -43,7 +45,6 @@
   .quest-meta span { font-size:11px; }
   .xp-tag { color:var(--gold-dim); }
   .streak-tag { color:var(--ruby); display:flex; align-items:center; gap:2px; }
-  .cat-tag { padding:1px 6px; border-radius:3px; font-size:10px; }
   .quest-actions { display:flex; align-items:center; gap:2px; flex-shrink:0; }
   .icon-btn { background:none; border:none; color:var(--parchment-dim); font-size:15px; padding:4px 7px; cursor:pointer; }
   .add-btn { width:100%; background:transparent; border:1px dashed var(--gold-dim); color:var(--parchment-dim); padding:12px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:6px; cursor:pointer; font-family:'Spectral',serif; font-size:14px; }
@@ -74,6 +75,12 @@
   .cat-breakdown { margin-top:16px; }
   .cat-row { display:flex; align-items:center; justify-content:space-between; background:var(--panel); border-radius:6px; padding:10px 14px; margin-bottom:8px; }
   .cat-dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:8px; }
+  .guild-row { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-radius:6px; margin-bottom:8px; background:var(--panel); }
+  .guild-row.me { background:var(--panel-light); border:1px solid var(--gold-dim); }
+  .guild-rank { color:var(--gold-dim); font-size:12px; width:18px; }
+  .guild-name { font-size:14px; }
+  .guild-sub { color:var(--parchment-dim); font-size:11px; }
+  .guild-lvl { color:var(--gold); font-weight:700; }
   .name-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
   .name-card { background:var(--panel); border:1px solid var(--gold-dim); border-radius:10px; padding:32px 28px; text-align:center; width:100%; max-width:340px; }
   .name-card h1 { color:var(--parchment); font-size:24px; letter-spacing:0.04em; margin:12px 0 4px; }
@@ -84,12 +91,38 @@
   .levelup-box { background:rgba(27,26,42,0.94); border:1px solid var(--gold); border-radius:10px; padding:24px 32px; text-align:center; }
   .levelup-box .t1 { color:var(--gold); font-size:20px; font-weight:700; margin:8px 0 4px; }
   .levelup-box .t2 { color:var(--parchment); font-size:13px; }
+  .empty-note { color:var(--parchment-dim); font-size:13px; text-align:center; padding:24px 0; }
 </style>
 </head>
 <body>
 <div id="app"></div>
+ 
 <script>
-const KEY = "quest-log-player-v2";
+/* ======================================================
+   FIREBASE CONFIG — replace with YOUR project's config.
+   Get this from: Firebase console > Project settings >
+   General > "Your apps" > SDK setup and configuration.
+====================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDUAOJXR1J6OS_Ws-lnNz8rR_s5GUFB-KM",
+  authDomain: "quest-log-1fa27.firebaseapp.com",
+  projectId: "quest-log-1fa27",
+  storageBucket: "quest-log-1fa27.firebasestorage.app",
+  messagingSenderId: "879588978724",
+  appId: "1:879588978724:web:6faa874ecb655cb6df68b1"
+};
+ 
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} catch(e) {
+  console.warn("Firebase not configured yet:", e);
+}
+</script>
+ 
+<script>
+const KEY = "quest-log-player-v3";
 const CATEGORIES = {
   health:  { label:"Health",  color:"#4C9A6A" },
   mind:    { label:"Mind",    color:"#5B84C4" },
@@ -102,7 +135,7 @@ const STARTER_QUESTS = [
   { id:"q2", name:"Gym", xp:20, category:"health", history:{} },
   { id:"q3", name:"Daily tasks", xp:10, category:"tasks", history:{} },
 ];
-
+ 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
 function computeStreak(history){
@@ -114,7 +147,30 @@ function computeStreak(history){
 function levelFromXp(xp){ return Math.floor(xp/100)+1; }
 function loadPlayer(){ try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
 function savePlayer(p){ try { localStorage.setItem(KEY, JSON.stringify(p)); } catch(e){} }
-
+ 
+async function syncToGuild(p){
+  if (!db) return;
+  const todayCount = p.quests.filter(q => q.history[todayStr()]).length;
+  try {
+    await db.collection("guild").doc(p.username).set({
+      username: p.username,
+      xp: p.xp,
+      level: levelFromXp(p.xp),
+      todayCount,
+      totalQuests: p.quests.length,
+      updatedAt: Date.now()
+    });
+  } catch(e) { console.warn("Guild sync failed:", e); }
+}
+ 
+async function loadGuild(){
+  if (!db) return [];
+  try {
+    const snap = await db.collection("guild").orderBy("xp", "desc").get();
+    return snap.docs.map(d => d.data());
+  } catch(e) { console.warn("Guild load failed:", e); return []; }
+}
+ 
 let player = loadPlayer();
 let tab = "quests";
 let formOpen = false;
@@ -122,11 +178,13 @@ let editingId = null;
 let formName = "";
 let formCategory = "health";
 let formXp = 10;
-
+let guildData = [];
+let guildLoading = false;
+ 
 function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = 10; render(); }
 function openEditForm(q){ formOpen = true; editingId = q.id; formName = q.name; formCategory = q.category || "other"; formXp = q.xp; render(); }
 function closeForm(){ formOpen = false; editingId = null; render(); }
-
+ 
 function render(){
   const app = document.getElementById("app");
   if (!player) {
@@ -140,31 +198,28 @@ function render(){
           <button id="beginBtn">BEGIN</button>
         </div>
       </div>`;
-    document.getElementById("beginBtn").onclick = () => {
+    document.getElementById("beginBtn").onclick = async () => {
       const name = document.getElementById("nameInput").value.trim();
       if (!name) return;
       player = { username:name, xp:0, quests: STARTER_QUESTS.map(q=>({...q, history:{}})) };
       savePlayer(player);
+      await syncToGuild(player);
       render();
     };
     document.getElementById("nameInput").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("beginBtn").click(); });
     return;
   }
-
+ 
   const level = levelFromXp(player.xp);
   const xpIntoLevel = player.xp % 100;
-
+ 
   let bodyHtml = "";
   if (tab === "quests") {
     if (formOpen) {
       bodyHtml = renderForm();
     } else {
-      // group by category, preserving CATEGORIES order
       const grouped = {};
-      player.quests.forEach(q => {
-        const cat = q.category || "other";
-        (grouped[cat] = grouped[cat] || []).push(q);
-      });
+      player.quests.forEach(q => { const cat = q.category || "other"; (grouped[cat] = grouped[cat] || []).push(q); });
       Object.keys(CATEGORIES).forEach(catKey => {
         if (!grouped[catKey]) return;
         const catInfo = CATEGORIES[catKey];
@@ -175,8 +230,10 @@ function render(){
     }
   } else if (tab === "stats") {
     bodyHtml = renderStats();
+  } else if (tab === "guild") {
+    bodyHtml = renderGuild();
   }
-
+ 
   app.innerHTML = `
     <div class="header">
       <div class="header-top">
@@ -189,12 +246,18 @@ function render(){
     <div class="tabs">
       <button class="tab ${tab==='quests'?'active':''}" data-tab="quests">&#128220; QUESTS</button>
       <button class="tab ${tab==='stats'?'active':''}" data-tab="stats">&#127942; STATS</button>
+      <button class="tab ${tab==='guild'?'active':''}" data-tab="guild">&#128101; GUILD</button>
     </div>
     <div class="content">${bodyHtml}</div>
   `;
-
-  document.querySelectorAll("[data-tab]").forEach(el=>{ el.onclick = () => { tab = el.getAttribute("data-tab"); formOpen=false; render(); }; });
-
+ 
+  document.querySelectorAll("[data-tab]").forEach(el=>{
+    el.onclick = () => {
+      tab = el.getAttribute("data-tab"); formOpen=false; render();
+      if (tab === "guild") refreshGuild();
+    };
+  });
+ 
   if (formOpen) {
     document.querySelectorAll("[data-cat]").forEach(el=>{ el.onclick = () => { formCategory = el.getAttribute("data-cat"); render(); }; });
     document.querySelectorAll("[data-xp]").forEach(el=>{ el.onclick = () => { formXp = parseInt(el.getAttribute("data-xp")); render(); }; });
@@ -215,7 +278,7 @@ function render(){
     if (showAddBtn) showAddBtn.onclick = openAddForm;
   }
 }
-
+ 
 function renderQuest(q, catInfo){
   const done = !!q.history[todayStr()];
   const streak = computeStreak(q.history);
@@ -237,7 +300,7 @@ function renderQuest(q, catInfo){
       </div>
     </div>`;
 }
-
+ 
 function renderForm(){
   let catChips = Object.keys(CATEGORIES).map(key => {
     const c = CATEGORIES[key];
@@ -259,8 +322,8 @@ function renderForm(){
       </div>
     </div>`;
 }
-
-function saveQuestFromForm(){
+ 
+async function saveQuestFromForm(){
   const nameInput = document.getElementById("questNameInput");
   const name = (nameInput ? nameInput.value : formName).trim();
   if (!name) return;
@@ -273,9 +336,10 @@ function saveQuestFromForm(){
   savePlayer(player);
   formOpen = false; editingId = null;
   render();
+  syncToGuild(player);
 }
-
-function toggleQuest(qid){
+ 
+async function toggleQuest(qid){
   const q = player.quests.find(x=>x.id===qid);
   const t = todayStr();
   const wasDone = !!q.history[t];
@@ -286,14 +350,16 @@ function toggleQuest(qid){
   savePlayer(player);
   render();
   if (newLevel > prevLevel) showLevelUp(newLevel);
+  syncToGuild(player);
 }
-
+ 
 function removeQuest(qid){
   player.quests = player.quests.filter(q=>q.id!==qid);
   savePlayer(player);
   render();
+  syncToGuild(player);
 }
-
+ 
 function renderStats(){
   let weekBars = "";
   for (let idx=0; idx<7; idx++){
@@ -305,8 +371,6 @@ function renderStats(){
     weekBars += `<div class="day-col"><div class="day-track"><div class="day-fill" style="height:${pct}%; background:${pct===100?'var(--gold)':'var(--sapphire)'}"></div></div><div class="day-label mono">${label}</div></div>`;
   }
   const bestStreak = Math.max(0, ...player.quests.map(q=>computeStreak(q.history)), 0);
-
-  // XP earned per category (all-time, from completed days)
   const catTotals = {};
   Object.keys(CATEGORIES).forEach(k => catTotals[k] = 0);
   player.quests.forEach(q => {
@@ -318,7 +382,7 @@ function renderStats(){
     const c = CATEGORIES[key];
     return `<div class="cat-row"><span><span class="cat-dot" style="background:${c.color}"></span>${c.label}</span><span class="mono">${catTotals[key]} XP</span></div>`;
   }).join("");
-
+ 
   return `
     <div class="week-card">
       <div class="week-title mono">LAST 7 DAYS</div>
@@ -334,7 +398,38 @@ function renderStats(){
     </div>
   `;
 }
-
+ 
+function renderGuild(){
+  if (!db) {
+    return `<div class="empty-note">Guild isn't connected yet — add your Firebase config at the top of the file.</div>`;
+  }
+  if (guildLoading) {
+    return `<div class="empty-note">Summoning the guild roster…</div>`;
+  }
+  if (guildData.length === 0) {
+    return `<div class="empty-note">No one else has joined yet. Share this app with friends!</div>`;
+  }
+  return guildData.map((g, i) => `
+    <div class="guild-row ${g.username===player.username?'me':''}">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="guild-rank mono">${i+1}</span>
+        <div>
+          <div class="guild-name">${g.username}${g.username===player.username?' (you)':''}</div>
+          <div class="guild-sub mono">${g.todayCount}/${g.totalQuests} today</div>
+        </div>
+      </div>
+      <div class="guild-lvl cinzel">Lv${g.level}</div>
+    </div>`).join("");
+}
+ 
+async function refreshGuild(){
+  guildLoading = true;
+  render();
+  guildData = await loadGuild();
+  guildLoading = false;
+  render();
+}
+ 
 function showLevelUp(level){
   const div = document.createElement("div");
   div.className = "levelup";
@@ -342,8 +437,10 @@ function showLevelUp(level){
   document.body.appendChild(div);
   setTimeout(()=>div.remove(), 1600);
 }
-
+ 
 render();
+if (player) syncToGuild(player);
 </script>
 </body>
 </html>
+ 
