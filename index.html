@@ -92,16 +92,16 @@
   .levelup-box .t1 { color:var(--gold); font-size:20px; font-weight:700; margin:8px 0 4px; }
   .levelup-box .t2 { color:var(--parchment); font-size:13px; }
   .empty-note { color:var(--parchment-dim); font-size:13px; text-align:center; padding:24px 0; }
+  .danger-btn { width:100%; background:transparent; border:1.5px solid var(--ruby); color:var(--ruby); border-radius:5px; padding:11px; font-size:14px; cursor:pointer; font-family:'Spectral',serif; margin-top:8px; }
+  .settings-note { color:var(--parchment-dim); font-size:12px; margin-top:6px; }
 </style>
 </head>
 <body>
 <div id="app"></div>
- 
+
 <script>
 /* ======================================================
-   FIREBASE CONFIG — replace with YOUR project's config.
-   Get this from: Firebase console > Project settings >
-   General > "Your apps" > SDK setup and configuration.
+   FIREBASE CONFIG
 ====================================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyDUAOJXR1J6OS_Ws-lnNz8rR_s5GUFB-KM",
@@ -111,7 +111,7 @@ const firebaseConfig = {
   messagingSenderId: "879588978724",
   appId: "1:879588978724:web:6faa874ecb655cb6df68b1"
 };
- 
+
 let db = null;
 try {
   firebase.initializeApp(firebaseConfig);
@@ -120,7 +120,7 @@ try {
   console.warn("Firebase not configured yet:", e);
 }
 </script>
- 
+
 <script>
 const KEY = "quest-log-player-v3";
 const CATEGORIES = {
@@ -135,7 +135,7 @@ const STARTER_QUESTS = [
   { id:"q2", name:"Gym", xp:20, category:"health", history:{} },
   { id:"q3", name:"Daily tasks", xp:10, category:"tasks", history:{} },
 ];
- 
+
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
 function computeStreak(history){
@@ -147,7 +147,7 @@ function computeStreak(history){
 function levelFromXp(xp){ return Math.floor(xp/100)+1; }
 function loadPlayer(){ try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
 function savePlayer(p){ try { localStorage.setItem(KEY, JSON.stringify(p)); } catch(e){} }
- 
+
 async function syncToGuild(p){
   if (!db) return;
   const todayCount = p.quests.filter(q => q.history[todayStr()]).length;
@@ -162,7 +162,7 @@ async function syncToGuild(p){
     });
   } catch(e) { console.warn("Guild sync failed:", e); }
 }
- 
+
 async function loadGuild(){
   if (!db) return [];
   try {
@@ -170,7 +170,7 @@ async function loadGuild(){
     return snap.docs.map(d => d.data());
   } catch(e) { console.warn("Guild load failed:", e); return []; }
 }
- 
+
 let player = loadPlayer();
 let tab = "quests";
 let formOpen = false;
@@ -180,11 +180,11 @@ let formCategory = "health";
 let formXp = 10;
 let guildData = [];
 let guildLoading = false;
- 
+
 function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = 10; render(); }
 function openEditForm(q){ formOpen = true; editingId = q.id; formName = q.name; formCategory = q.category || "other"; formXp = q.xp; render(); }
 function closeForm(){ formOpen = false; editingId = null; render(); }
- 
+
 function render(){
   const app = document.getElementById("app");
   if (!player) {
@@ -209,10 +209,10 @@ function render(){
     document.getElementById("nameInput").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("beginBtn").click(); });
     return;
   }
- 
+
   const level = levelFromXp(player.xp);
   const xpIntoLevel = player.xp % 100;
- 
+
   let bodyHtml = "";
   if (tab === "quests") {
     if (formOpen) {
@@ -232,8 +232,10 @@ function render(){
     bodyHtml = renderStats();
   } else if (tab === "guild") {
     bodyHtml = renderGuild();
+  } else if (tab === "settings") {
+    bodyHtml = renderSettings();
   }
- 
+
   app.innerHTML = `
     <div class="header">
       <div class="header-top">
@@ -247,17 +249,18 @@ function render(){
       <button class="tab ${tab==='quests'?'active':''}" data-tab="quests">&#128220; QUESTS</button>
       <button class="tab ${tab==='stats'?'active':''}" data-tab="stats">&#127942; STATS</button>
       <button class="tab ${tab==='guild'?'active':''}" data-tab="guild">&#128101; GUILD</button>
+      <button class="tab ${tab==='settings'?'active':''}" data-tab="settings">&#9881;</button>
     </div>
     <div class="content">${bodyHtml}</div>
   `;
- 
+
   document.querySelectorAll("[data-tab]").forEach(el=>{
     el.onclick = () => {
       tab = el.getAttribute("data-tab"); formOpen=false; render();
       if (tab === "guild") refreshGuild();
     };
   });
- 
+
   if (formOpen) {
     document.querySelectorAll("[data-cat]").forEach(el=>{ el.onclick = () => { formCategory = el.getAttribute("data-cat"); render(); }; });
     document.querySelectorAll("[data-xp]").forEach(el=>{ el.onclick = () => { formXp = parseInt(el.getAttribute("data-xp")); render(); }; });
@@ -277,8 +280,18 @@ function render(){
     const showAddBtn = document.getElementById("showAddBtn");
     if (showAddBtn) showAddBtn.onclick = openAddForm;
   }
+
+  if (tab === "settings") {
+    const saveNameBtn = document.getElementById("saveUsernameBtn");
+    if (saveNameBtn) saveNameBtn.onclick = () => {
+      const val = document.getElementById("usernameInput").value;
+      changeUsername(val);
+    };
+    const deleteBtn = document.getElementById("deleteAccountBtn");
+    if (deleteBtn) deleteBtn.onclick = deleteAccount;
+  }
 }
- 
+
 function renderQuest(q, catInfo){
   const done = !!q.history[todayStr()];
   const streak = computeStreak(q.history);
@@ -300,7 +313,7 @@ function renderQuest(q, catInfo){
       </div>
     </div>`;
 }
- 
+
 function renderForm(){
   let catChips = Object.keys(CATEGORIES).map(key => {
     const c = CATEGORIES[key];
@@ -322,7 +335,7 @@ function renderForm(){
       </div>
     </div>`;
 }
- 
+
 async function saveQuestFromForm(){
   const nameInput = document.getElementById("questNameInput");
   const name = (nameInput ? nameInput.value : formName).trim();
@@ -338,7 +351,7 @@ async function saveQuestFromForm(){
   render();
   syncToGuild(player);
 }
- 
+
 async function toggleQuest(qid){
   const q = player.quests.find(x=>x.id===qid);
   const t = todayStr();
@@ -352,14 +365,14 @@ async function toggleQuest(qid){
   if (newLevel > prevLevel) showLevelUp(newLevel);
   syncToGuild(player);
 }
- 
+
 function removeQuest(qid){
   player.quests = player.quests.filter(q=>q.id!==qid);
   savePlayer(player);
   render();
   syncToGuild(player);
 }
- 
+
 function renderStats(){
   let weekBars = "";
   for (let idx=0; idx<7; idx++){
@@ -382,7 +395,7 @@ function renderStats(){
     const c = CATEGORIES[key];
     return `<div class="cat-row"><span><span class="cat-dot" style="background:${c.color}"></span>${c.label}</span><span class="mono">${catTotals[key]} XP</span></div>`;
   }).join("");
- 
+
   return `
     <div class="week-card">
       <div class="week-title mono">LAST 7 DAYS</div>
@@ -398,7 +411,7 @@ function renderStats(){
     </div>
   `;
 }
- 
+
 function renderGuild(){
   if (!db) {
     return `<div class="empty-note">Guild isn't connected yet — add your Firebase config at the top of the file.</div>`;
@@ -421,7 +434,7 @@ function renderGuild(){
       <div class="guild-lvl cinzel">Lv${g.level}</div>
     </div>`).join("");
 }
- 
+
 async function refreshGuild(){
   guildLoading = true;
   render();
@@ -429,7 +442,50 @@ async function refreshGuild(){
   guildLoading = false;
   render();
 }
- 
+
+function renderSettings(){
+  return `
+    <div class="form-card">
+      <label>USERNAME</label>
+      <input type="text" id="usernameInput" value="${player.username.replace(/"/g,'&quot;')}" />
+      <div class="settings-note">Changing this moves your guild entry to the new name.</div>
+      <div class="form-buttons">
+        <button class="btn-primary" id="saveUsernameBtn" style="flex:1">Save Username</button>
+      </div>
+    </div>
+    <div class="form-card" style="margin-top:14px;">
+      <label>DANGER ZONE</label>
+      <div class="settings-note">Permanently erases your quests, XP, and guild entry on this device. Cannot be undone.</div>
+      <button class="danger-btn" id="deleteAccountBtn">Delete Account</button>
+    </div>
+  `;
+}
+
+async function changeUsername(newNameRaw){
+  const newName = (newNameRaw || "").trim();
+  if (!newName || newName === player.username) return;
+  const oldName = player.username;
+  player.username = newName;
+  savePlayer(player);
+  render();
+  if (db) {
+    try { await db.collection("guild").doc(oldName).delete(); } catch(e){}
+    syncToGuild(player);
+  }
+}
+
+async function deleteAccount(){
+  const sure = confirm("Delete your account? This removes all quests, XP, and your guild entry. This can't be undone.");
+  if (!sure) return;
+  if (db && player) {
+    try { await db.collection("guild").doc(player.username).delete(); } catch(e){}
+  }
+  try { localStorage.removeItem(KEY); } catch(e){}
+  player = null;
+  tab = "quests";
+  render();
+}
+
 function showLevelUp(level){
   const div = document.createElement("div");
   div.className = "levelup";
@@ -437,10 +493,9 @@ function showLevelUp(level){
   document.body.appendChild(div);
   setTimeout(()=>div.remove(), 1600);
 }
- 
+
 render();
 if (player) syncToGuild(player);
 </script>
 </body>
 </html>
- 
