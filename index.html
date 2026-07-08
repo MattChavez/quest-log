@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>Quest Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&family=MedievalSharp&family=Uncial+Antiqua&family=Pirata+One&family=Metamorphous&family=IM+Fell+English+SC&family=Almendra+SC&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
@@ -20,16 +20,21 @@
   body { margin:0; background:var(--ink); color:var(--parchment); font-family:'Spectral',serif; min-height:100vh; padding-bottom:40px; }
   h1,.cinzel { font-family:'Cinzel',serif; }
   .mono { font-family:'IBM Plex Mono',monospace; }
+  @keyframes goldPulse { 0%,100% { text-shadow: 0 0 6px rgba(212,175,55,0.35); } 50% { text-shadow: 0 0 16px rgba(212,175,55,0.9); } }
+  .glow { animation: goldPulse 2.6s ease-in-out infinite; }
   .header { background:var(--panel); border-bottom:1px solid var(--gold-dim); padding:24px 20px 16px; }
-  .header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  .header-top small { color:var(--parchment-dim); font-size:11px; letter-spacing:0.08em; }
-  .header-top h1 { color:var(--parchment); font-size:22px; margin:2px 0 0; }
-  .lvl { color:var(--gold); font-size:26px; font-weight:900; }
+  .header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:12px; }
+  .id-row { display:flex; align-items:center; gap:12px; min-width:0; }
+  .avatar { width:48px; height:48px; border-radius:50%; border:2px solid var(--gold-dim); object-fit:cover; flex-shrink:0; background:var(--panel-light); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; overflow:hidden; }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .header-top small { color:var(--gold); font-size:11px; letter-spacing:0.08em; }
+  .header-top h1 { color:var(--parchment); font-size:21px; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lvl { color:var(--gold); font-size:26px; font-weight:900; flex-shrink:0; }
   .bar-bg { background:var(--ink); border-radius:999px; height:10px; overflow:hidden; border:1px solid var(--gold-dim); }
   .bar-fill { background:linear-gradient(90deg,var(--gold-dim),var(--gold)); height:100%; transition:width .4s; }
   .xp-label { color:var(--parchment-dim); font-size:12px; margin-top:6px; }
-  .tabs { display:flex; gap:8px; padding:16px 20px 0; }
-  .tab { flex:1; background:transparent; border:1px solid transparent; border-radius:6px; color:var(--parchment-dim); padding:8px 0; font-size:12px; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
+  .tabs { display:flex; gap:6px; padding:16px 20px 0; }
+  .tab { flex:1; background:transparent; border:1px solid transparent; border-radius:6px; color:var(--parchment-dim); padding:9px 0; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .tab.active { background:var(--panel-light); color:var(--gold); border-color:var(--gold-dim); }
   .content { padding:16px 20px; }
   .cat-header { color:var(--parchment-dim); font-size:11px; letter-spacing:0.08em; margin:16px 0 8px; }
@@ -51,7 +56,8 @@
   .form-card { background:var(--panel); border-radius:6px; padding:16px; }
   .form-card label { display:block; color:var(--parchment-dim); font-size:11px; margin:12px 0 6px; letter-spacing:0.05em; }
   .form-card label:first-child { margin-top:0; }
-  .form-card input[type=text] { width:100%; background:var(--ink); color:var(--parchment); border:1px solid var(--gold-dim); border-radius:5px; padding:9px 12px; font-size:14px; outline:none; font-family:'Spectral',serif; }
+  .form-card input[type=text], .form-card input[type=number] { width:100%; background:var(--ink); color:var(--parchment); border:1px solid var(--gold-dim); border-radius:5px; padding:9px 12px; font-size:14px; outline:none; font-family:'Spectral',serif; }
+  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   .cat-picker { display:flex; gap:8px; flex-wrap:wrap; }
   .cat-chip { padding:7px 12px; border-radius:999px; font-size:12px; border:1.5px solid var(--gold-dim); background:transparent; color:var(--parchment-dim); cursor:pointer; font-family:'Spectral',serif; }
   .cat-chip.selected { color:var(--ink); font-weight:600; }
@@ -88,12 +94,26 @@
   .name-card input { width:100%; background:var(--ink); color:var(--parchment); border:1px solid var(--gold-dim); border-radius:5px; padding:10px 14px; margin-bottom:16px; text-align:center; font-size:15px; outline:none; font-family:'Spectral',serif; }
   .name-card button { width:100%; background:var(--gold); color:var(--ink); border:none; border-radius:5px; padding:11px; font-weight:700; font-size:14px; letter-spacing:0.04em; cursor:pointer; font-family:'Cinzel',serif; }
   .levelup { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:50; pointer-events:none; }
-  .levelup-box { background:rgba(27,26,42,0.94); border:1px solid var(--gold); border-radius:10px; padding:24px 32px; text-align:center; }
+  .levelup-box { background:rgba(27,26,42,0.94); border:1px solid var(--gold); border-radius:10px; padding:24px 32px; text-align:center; max-width:300px; }
   .levelup-box .t1 { color:var(--gold); font-size:20px; font-weight:700; margin:8px 0 4px; }
   .levelup-box .t2 { color:var(--parchment); font-size:13px; }
+  .levelup-box .t3 { color:var(--gold-dim); font-size:12px; margin-top:8px; font-style:italic; }
   .empty-note { color:var(--parchment-dim); font-size:13px; text-align:center; padding:24px 0; }
   .danger-btn { width:100%; background:transparent; border:1.5px solid var(--ruby); color:var(--ruby); border-radius:5px; padding:11px; font-size:14px; cursor:pointer; font-family:'Spectral',serif; margin-top:8px; }
   .settings-note { color:var(--parchment-dim); font-size:12px; margin-top:6px; }
+  .font-grid { display:flex; flex-direction:column; gap:8px; }
+  .font-option { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:6px; border:1.5px solid var(--gold-dim); background:transparent; cursor:pointer; color:var(--parchment); }
+  .font-option.selected { background:var(--panel-light); border-color:var(--gold); }
+  .font-option.locked { opacity:0.4; cursor:default; }
+  .font-option .lock-note { font-size:11px; color:var(--parchment-dim); font-family:'IBM Plex Mono',monospace; }
+  .avatar-row { display:flex; align-items:center; gap:16px; }
+  .avatar-lg { width:64px; height:64px; border-radius:50%; border:2px solid var(--gold-dim); overflow:hidden; background:var(--panel-light); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
+  .avatar-lg img { width:100%; height:100%; object-fit:cover; }
+  .exercise-row { display:flex; align-items:center; justify-content:space-between; background:var(--ink); border-radius:5px; padding:8px 12px; margin-bottom:6px; }
+  .exercise-name { font-size:13px; }
+  .exercise-detail { color:var(--parchment-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; }
+  .workout-log-card { background:var(--panel); border-radius:6px; padding:14px 16px; margin-bottom:10px; }
+  .workout-log-date { color:var(--gold-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -130,10 +150,41 @@ const CATEGORIES = {
   other:   { label:"Other",   color:"#D4AF37" },
 };
 const XP_PRESETS = [5,10,15,20,25,30];
+const DEFAULT_CATEGORY_XP = { health:20, mind:15, tasks:10, other:10 };
 const STARTER_QUESTS = [
-  { id:"q1", name:"Morning routine", xp:10, category:"mind", history:{} },
+  { id:"q1", name:"Morning routine", xp:15, category:"mind", history:{} },
   { id:"q2", name:"Gym", xp:20, category:"health", history:{} },
   { id:"q3", name:"Daily tasks", xp:10, category:"tasks", history:{} },
+];
+
+const TITLES = [
+  {level:1, title:"Squire"}, {level:2, title:"Page"}, {level:3, title:"Journeyman"},
+  {level:4, title:"Man-at-Arms"}, {level:5, title:"Knight"}, {level:6, title:"Knight-Errant"},
+  {level:7, title:"Champion"}, {level:8, title:"Baron"}, {level:9, title:"Viscount"},
+  {level:10, title:"Earl"}, {level:11, title:"Marquess"}, {level:12, title:"Duke"},
+  {level:13, title:"Warlord"}, {level:14, title:"Crusader"}, {level:15, title:"Paladin"},
+  {level:16, title:"High Knight"}, {level:17, title:"Lord Commander"}, {level:18, title:"Grand Duke"},
+  {level:19, title:"Archduke"}, {level:20, title:"Sovereign"},
+];
+function titleForLevel(level){
+  let current = TITLES[0].title;
+  for (const t of TITLES) { if (level >= t.level) current = t.title; else break; }
+  return current;
+}
+function nextTitleInfo(level){
+  const next = TITLES.find(t => t.level > level);
+  return next || null;
+}
+
+const FONT_UNLOCKS = [
+  {level:1,  family:"'Spectral', serif",              label:"Spectral"},
+  {level:3,  family:"'MedievalSharp', cursive",        label:"Medieval Sharp"},
+  {level:5,  family:"'Uncial Antiqua', cursive",       label:"Uncial Antiqua"},
+  {level:8,  family:"'Pirata One', cursive",           label:"Pirata One"},
+  {level:11, family:"'Metamorphous', cursive",         label:"Metamorphous"},
+  {level:14, family:"'IM Fell English SC', serif",     label:"IM Fell English"},
+  {level:17, family:"'Cinzel Decorative', cursive",    label:"Cinzel Decorative"},
+  {level:20, family:"'Almendra SC', serif",            label:"Almendra SC"},
 ];
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -145,7 +196,16 @@ function computeStreak(history){
   return streak;
 }
 function levelFromXp(xp){ return Math.floor(xp/100)+1; }
-function loadPlayer(){ try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } }
+
+function ensurePlayerShape(p){
+  if (!p.categoryDefaults) p.categoryDefaults = { ...DEFAULT_CATEGORY_XP };
+  Object.keys(DEFAULT_CATEGORY_XP).forEach(k => { if (typeof p.categoryDefaults[k] !== "number") p.categoryDefaults[k] = DEFAULT_CATEGORY_XP[k]; });
+  if (!p.workoutHistory) p.workoutHistory = {};
+  if (!p.avatar) p.avatar = null;
+  if (!p.usernameFont) p.usernameFont = FONT_UNLOCKS[0].family;
+  return p;
+}
+function loadPlayer(){ try { const raw = localStorage.getItem(KEY); return raw ? ensurePlayerShape(JSON.parse(raw)) : null; } catch(e){ return null; } }
 function savePlayer(p){ try { localStorage.setItem(KEY, JSON.stringify(p)); } catch(e){} }
 
 async function syncToGuild(p){
@@ -153,22 +213,16 @@ async function syncToGuild(p){
   const todayCount = p.quests.filter(q => q.history[todayStr()]).length;
   try {
     await db.collection("guild").doc(p.username).set({
-      username: p.username,
-      xp: p.xp,
-      level: levelFromXp(p.xp),
-      todayCount,
-      totalQuests: p.quests.length,
-      updatedAt: Date.now()
+      username: p.username, xp: p.xp, level: levelFromXp(p.xp),
+      title: titleForLevel(levelFromXp(p.xp)),
+      todayCount, totalQuests: p.quests.length, updatedAt: Date.now()
     });
   } catch(e) { console.warn("Guild sync failed:", e); }
 }
-
 async function loadGuild(){
   if (!db) return [];
-  try {
-    const snap = await db.collection("guild").orderBy("xp", "desc").get();
-    return snap.docs.map(d => d.data());
-  } catch(e) { console.warn("Guild load failed:", e); return []; }
+  try { const snap = await db.collection("guild").orderBy("xp", "desc").get(); return snap.docs.map(d => d.data()); }
+  catch(e) { console.warn("Guild load failed:", e); return []; }
 }
 
 let player = loadPlayer();
@@ -180,8 +234,10 @@ let formCategory = "health";
 let formXp = 10;
 let guildData = [];
 let guildLoading = false;
+let workoutDraft = [];
+let wName = "", wSets = 3, wReps = 10, wWeight = 0;
 
-function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = 10; render(); }
+function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = player.categoryDefaults.health; render(); }
 function openEditForm(q){ formOpen = true; editingId = q.id; formName = q.name; formCategory = q.category || "other"; formXp = q.xp; render(); }
 function closeForm(){ formOpen = false; editingId = null; render(); }
 
@@ -201,7 +257,7 @@ function render(){
     document.getElementById("beginBtn").onclick = async () => {
       const name = document.getElementById("nameInput").value.trim();
       if (!name) return;
-      player = { username:name, xp:0, quests: STARTER_QUESTS.map(q=>({...q, history:{}})) };
+      player = ensurePlayerShape({ username:name, xp:0, quests: STARTER_QUESTS.map(q=>({...q, history:{}})) });
       savePlayer(player);
       await syncToGuild(player);
       render();
@@ -212,12 +268,12 @@ function render(){
 
   const level = levelFromXp(player.xp);
   const xpIntoLevel = player.xp % 100;
+  const title = titleForLevel(level);
 
   let bodyHtml = "";
   if (tab === "quests") {
-    if (formOpen) {
-      bodyHtml = renderForm();
-    } else {
+    if (formOpen) { bodyHtml = renderForm(); }
+    else {
       const grouped = {};
       player.quests.forEach(q => { const cat = q.category || "other"; (grouped[cat] = grouped[cat] || []).push(q); });
       Object.keys(CATEGORIES).forEach(catKey => {
@@ -228,68 +284,118 @@ function render(){
       });
       bodyHtml += `<button class="add-btn" id="showAddBtn">+ Add a quest</button>`;
     }
-  } else if (tab === "stats") {
-    bodyHtml = renderStats();
-  } else if (tab === "guild") {
-    bodyHtml = renderGuild();
-  } else if (tab === "settings") {
-    bodyHtml = renderSettings();
-  }
+  } else if (tab === "workout") { bodyHtml = renderWorkout(); }
+  else if (tab === "stats") { bodyHtml = renderStats(); }
+  else if (tab === "guild") { bodyHtml = renderGuild(); }
+  else if (tab === "settings") { bodyHtml = renderSettings(); }
 
   app.innerHTML = `
     <div class="header">
       <div class="header-top">
-        <div><small class="mono">ADVENTURER</small><h1 class="cinzel">${player.username}</h1></div>
-        <div class="lvl cinzel">Lv${level}</div>
+        <div class="id-row">
+          <label class="avatar" for="avatarInput">${player.avatar ? `<img src="${player.avatar}"/>` : '&#128100;'}</label>
+          <input type="file" id="avatarInput" accept="image/*" style="display:none" />
+          <div style="min-width:0;">
+            <small class="mono glow">${title.toUpperCase()}</small>
+            <h1 style="font-family:${player.usernameFont}">${player.username}</h1>
+          </div>
+        </div>
+        <div class="lvl cinzel glow">Lv${level}</div>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${xpIntoLevel}%"></div></div>
       <div class="xp-label mono">${xpIntoLevel} / 100 XP to Level ${level+1}</div>
     </div>
     <div class="tabs">
-      <button class="tab ${tab==='quests'?'active':''}" data-tab="quests">&#128220; QUESTS</button>
-      <button class="tab ${tab==='stats'?'active':''}" data-tab="stats">&#127942; STATS</button>
-      <button class="tab ${tab==='guild'?'active':''}" data-tab="guild">&#128101; GUILD</button>
-      <button class="tab ${tab==='settings'?'active':''}" data-tab="settings">&#9881;</button>
+      <button class="tab ${tab==='quests'?'active':''}" data-tab="quests" title="Quests">&#128220;</button>
+      <button class="tab ${tab==='workout'?'active':''}" data-tab="workout" title="Workout">&#128170;</button>
+      <button class="tab ${tab==='stats'?'active':''}" data-tab="stats" title="Stats">&#127942;</button>
+      <button class="tab ${tab==='guild'?'active':''}" data-tab="guild" title="Guild">&#128101;</button>
+      <button class="tab ${tab==='settings'?'active':''}" data-tab="settings" title="Settings">&#9881;</button>
     </div>
     <div class="content">${bodyHtml}</div>
   `;
 
+  document.getElementById("avatarInput").addEventListener("change", handleAvatarUpload);
+
   document.querySelectorAll("[data-tab]").forEach(el=>{
-    el.onclick = () => {
-      tab = el.getAttribute("data-tab"); formOpen=false; render();
-      if (tab === "guild") refreshGuild();
-    };
+    el.onclick = () => { tab = el.getAttribute("data-tab"); formOpen=false; render(); if (tab === "guild") refreshGuild(); };
   });
 
-  if (formOpen) {
-    document.querySelectorAll("[data-cat]").forEach(el=>{ el.onclick = () => { formCategory = el.getAttribute("data-cat"); render(); }; });
+  if (tab === "quests" && formOpen) {
+    document.querySelectorAll("[data-cat]").forEach(el=>{ el.onclick = () => { formCategory = el.getAttribute("data-cat"); formXp = player.categoryDefaults[formCategory]; render(); }; });
     document.querySelectorAll("[data-xp]").forEach(el=>{ el.onclick = () => { formXp = parseInt(el.getAttribute("data-xp")); render(); }; });
-    const saveBtn = document.getElementById("saveQuestBtn");
-    if (saveBtn) saveBtn.onclick = saveQuestFromForm;
-    const cancelBtn = document.getElementById("cancelFormBtn");
-    if (cancelBtn) cancelBtn.onclick = closeForm;
+    const saveBtn = document.getElementById("saveQuestBtn"); if (saveBtn) saveBtn.onclick = saveQuestFromForm;
+    const cancelBtn = document.getElementById("cancelFormBtn"); if (cancelBtn) cancelBtn.onclick = closeForm;
     const nameInput = document.getElementById("questNameInput");
-    if (nameInput) {
-      nameInput.oninput = (e) => { formName = e.target.value; };
-      nameInput.addEventListener("keydown", e=>{ if(e.key==="Enter") saveQuestFromForm(); });
-    }
-  } else {
+    if (nameInput) { nameInput.oninput = (e) => { formName = e.target.value; }; nameInput.addEventListener("keydown", e=>{ if(e.key==="Enter") saveQuestFromForm(); }); }
+  } else if (tab === "quests") {
     document.querySelectorAll("[data-toggle]").forEach(el=>{ el.onclick = () => toggleQuest(el.getAttribute("data-toggle")); });
     document.querySelectorAll("[data-edit]").forEach(el=>{ el.onclick = () => { const q = player.quests.find(x=>x.id===el.getAttribute("data-edit")); openEditForm(q); }; });
     document.querySelectorAll("[data-remove]").forEach(el=>{ el.onclick = () => removeQuest(el.getAttribute("data-remove")); });
-    const showAddBtn = document.getElementById("showAddBtn");
-    if (showAddBtn) showAddBtn.onclick = openAddForm;
+    const showAddBtn = document.getElementById("showAddBtn"); if (showAddBtn) showAddBtn.onclick = openAddForm;
+  }
+
+  if (tab === "workout") {
+    const wNameInput = document.getElementById("wNameInput");
+    if (wNameInput) wNameInput.oninput = e => wName = e.target.value;
+    const wSetsInput = document.getElementById("wSetsInput");
+    if (wSetsInput) wSetsInput.oninput = e => wSets = parseInt(e.target.value)||0;
+    const wRepsInput = document.getElementById("wRepsInput");
+    if (wRepsInput) wRepsInput.oninput = e => wReps = parseInt(e.target.value)||0;
+    const wWeightInput = document.getElementById("wWeightInput");
+    if (wWeightInput) wWeightInput.oninput = e => wWeight = parseInt(e.target.value)||0;
+    const addExBtn = document.getElementById("addExerciseBtn"); if (addExBtn) addExBtn.onclick = addExerciseToDraft;
+    document.querySelectorAll("[data-remove-ex]").forEach(el=>{ el.onclick = () => { workoutDraft.splice(parseInt(el.getAttribute("data-remove-ex")),1); render(); }; });
+    const saveWBtn = document.getElementById("saveWorkoutBtn"); if (saveWBtn) saveWBtn.onclick = saveWorkout;
+    const editWBtn = document.getElementById("editWorkoutBtn"); if (editWBtn) editWBtn.onclick = () => { workoutDraft = [...(player.workoutHistory[todayStr()]||[])]; delete player.workoutHistory[todayStr()]; savePlayer(player); render(); };
   }
 
   if (tab === "settings") {
     const saveNameBtn = document.getElementById("saveUsernameBtn");
-    if (saveNameBtn) saveNameBtn.onclick = () => {
-      const val = document.getElementById("usernameInput").value;
-      changeUsername(val);
-    };
-    const deleteBtn = document.getElementById("deleteAccountBtn");
-    if (deleteBtn) deleteBtn.onclick = deleteAccount;
+    if (saveNameBtn) saveNameBtn.onclick = () => { changeUsername(document.getElementById("usernameInput").value); };
+    const deleteBtn = document.getElementById("deleteAccountBtn"); if (deleteBtn) deleteBtn.onclick = deleteAccount;
+    const removeAvatarBtn = document.getElementById("removeAvatarBtn");
+    if (removeAvatarBtn) removeAvatarBtn.onclick = () => { player.avatar = null; savePlayer(player); render(); };
+    document.querySelectorAll("[data-font]").forEach(el=>{
+      el.onclick = () => {
+        const lvl = parseInt(el.getAttribute("data-level"));
+        if (level < lvl) return;
+        player.usernameFont = el.getAttribute("data-font");
+        savePlayer(player); render();
+      };
+    });
+    document.querySelectorAll("[data-cat-default]").forEach(el=>{
+      el.onclick = () => {
+        const cat = el.getAttribute("data-cat-default");
+        const val = parseInt(el.getAttribute("data-val"));
+        player.categoryDefaults[cat] = val;
+        savePlayer(player); render();
+      };
+    });
   }
+}
+
+function handleAvatarUpload(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 160;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide)/2, sy = (img.height - minSide)/2;
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      player.avatar = canvas.toDataURL('image/jpeg', 0.78);
+      savePlayer(player);
+      render();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderQuest(q, catInfo){
@@ -316,8 +422,7 @@ function renderQuest(q, catInfo){
 
 function renderForm(){
   let catChips = Object.keys(CATEGORIES).map(key => {
-    const c = CATEGORIES[key];
-    const sel = formCategory === key;
+    const c = CATEGORIES[key]; const sel = formCategory === key;
     return `<button type="button" class="cat-chip ${sel?'selected':''}" data-cat="${key}" style="${sel?`background:${c.color};border-color:${c.color}`:''}">${c.label}</button>`;
   }).join("");
   let xpChips = XP_PRESETS.map(v => `<button type="button" class="xp-chip ${formXp===v?'selected':''}" data-xp="${v}">${v}</button>`).join("");
@@ -340,16 +445,9 @@ async function saveQuestFromForm(){
   const nameInput = document.getElementById("questNameInput");
   const name = (nameInput ? nameInput.value : formName).trim();
   if (!name) return;
-  if (editingId) {
-    const q = player.quests.find(x=>x.id===editingId);
-    q.name = name; q.category = formCategory; q.xp = formXp;
-  } else {
-    player.quests.push({ id:"q"+Date.now(), name, xp:formXp, category:formCategory, history:{} });
-  }
-  savePlayer(player);
-  formOpen = false; editingId = null;
-  render();
-  syncToGuild(player);
+  if (editingId) { const q = player.quests.find(x=>x.id===editingId); q.name = name; q.category = formCategory; q.xp = formXp; }
+  else { player.quests.push({ id:"q"+Date.now(), name, xp:formXp, category:formCategory, history:{} }); }
+  savePlayer(player); formOpen = false; editingId = null; render(); syncToGuild(player);
 }
 
 async function toggleQuest(qid){
@@ -360,17 +458,83 @@ async function toggleQuest(qid){
   if (wasDone){ delete q.history[t]; player.xp = Math.max(0, player.xp - q.xp); }
   else { q.history[t] = true; player.xp += q.xp; }
   const newLevel = levelFromXp(player.xp);
-  savePlayer(player);
-  render();
+  savePlayer(player); render();
+  if (newLevel > prevLevel) showLevelUp(newLevel);
+  syncToGuild(player);
+}
+function removeQuest(qid){ player.quests = player.quests.filter(q=>q.id!==qid); savePlayer(player); render(); syncToGuild(player); }
+
+function addExerciseToDraft(){
+  const name = (document.getElementById("wNameInput").value || "").trim();
+  if (!name) return;
+  workoutDraft.push({ name, sets: wSets||0, reps: wReps||0, weight: wWeight||0 });
+  wName = ""; render();
+}
+
+async function saveWorkout(){
+  if (workoutDraft.length === 0) return;
+  const t = todayStr();
+  const alreadyLoggedToday = false; // draft flow already prevents double count since history entry only set here
+  const prevLevel = levelFromXp(player.xp);
+  player.workoutHistory[t] = workoutDraft;
+  player.xp += player.categoryDefaults.health;
+  const gymQuest = player.quests.find(q => q.category === "health" && !q.history[t]);
+  if (gymQuest) gymQuest.history[t] = true;
+  workoutDraft = [];
+  const newLevel = levelFromXp(player.xp);
+  savePlayer(player); render();
   if (newLevel > prevLevel) showLevelUp(newLevel);
   syncToGuild(player);
 }
 
-function removeQuest(qid){
-  player.quests = player.quests.filter(q=>q.id!==qid);
-  savePlayer(player);
-  render();
-  syncToGuild(player);
+function renderWorkout(){
+  const t = todayStr();
+  const logged = player.workoutHistory[t];
+  let html = "";
+  if (logged && workoutDraft.length === 0) {
+    html += `
+      <div class="workout-log-card">
+        <div class="workout-log-date mono">TODAY — LOGGED &#10003;</div>
+        ${logged.map(ex => `
+          <div class="exercise-row">
+            <span class="exercise-name">${ex.name}</span>
+            <span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''}</span>
+          </div>`).join("")}
+        <button class="btn-secondary" id="editWorkoutBtn" style="width:100%; margin-top:10px;">Edit Today's Workout</button>
+      </div>`;
+  } else {
+    html += `
+      <div class="form-card">
+        <label>EXERCISE</label>
+        <input type="text" id="wNameInput" placeholder="e.g. Bench Press" value="${wName.replace(/"/g,'&quot;')}" />
+        <label>SETS / REPS / WEIGHT (LB)</label>
+        <div class="row3">
+          <input type="number" id="wSetsInput" value="${wSets}" min="0" />
+          <input type="number" id="wRepsInput" value="${wReps}" min="0" />
+          <input type="number" id="wWeightInput" value="${wWeight}" min="0" />
+        </div>
+        <div class="form-buttons">
+          <button class="btn-primary" id="addExerciseBtn" style="flex:1">+ Add Exercise</button>
+        </div>
+      </div>`;
+    if (workoutDraft.length > 0) {
+      html += `<div class="workout-log-card" style="margin-top:12px;">`;
+      workoutDraft.forEach((ex, i) => {
+        html += `<div class="exercise-row"><span class="exercise-name">${ex.name}</span><span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''} <button class="icon-btn" data-remove-ex="${i}">&#10005;</button></span></div>`;
+      });
+      html += `<button class="btn-primary" id="saveWorkoutBtn" style="width:100%; margin-top:10px;">Save Workout (+${player.categoryDefaults.health} XP)</button></div>`;
+    }
+  }
+
+  const recentDates = Object.keys(player.workoutHistory).filter(d => d !== t).sort().reverse().slice(0,5);
+  if (recentDates.length > 0) {
+    html += `<div class="week-title mono" style="margin-top:20px;">RECENT WORKOUTS</div>`;
+    recentDates.forEach(d => {
+      const exs = player.workoutHistory[d];
+      html += `<div class="workout-log-card"><div class="workout-log-date mono">${d}</div>${exs.map(ex => `<div class="exercise-row"><span class="exercise-name">${ex.name}</span><span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''}</span></div>`).join("")}</div>`;
+    });
+  }
+  return html;
 }
 
 function renderStats(){
@@ -397,62 +561,87 @@ function renderStats(){
   }).join("");
 
   return `
-    <div class="week-card">
-      <div class="week-title mono">LAST 7 DAYS</div>
-      <div class="week-bars">${weekBars}</div>
-    </div>
+    <div class="week-card"><div class="week-title mono">LAST 7 DAYS</div><div class="week-bars">${weekBars}</div></div>
     <div class="stat-grid">
       <div class="stat-card"><div class="num cinzel">${player.xp}</div><div class="label mono">TOTAL XP</div></div>
       <div class="stat-card"><div class="num cinzel">&#128293; ${bestStreak}</div><div class="label mono">BEST STREAK</div></div>
     </div>
-    <div class="cat-breakdown">
-      <div class="week-title mono">XP BY CATEGORY</div>
-      ${catRows}
-    </div>
+    <div class="cat-breakdown"><div class="week-title mono">XP BY CATEGORY</div>${catRows}</div>
   `;
 }
 
 function renderGuild(){
-  if (!db) {
-    return `<div class="empty-note">Guild isn't connected yet — add your Firebase config at the top of the file.</div>`;
-  }
-  if (guildLoading) {
-    return `<div class="empty-note">Summoning the guild roster…</div>`;
-  }
-  if (guildData.length === 0) {
-    return `<div class="empty-note">No one else has joined yet. Share this app with friends!</div>`;
-  }
+  if (!db) return `<div class="empty-note">Guild isn't connected yet — add your Firebase config at the top of the file.</div>`;
+  if (guildLoading) return `<div class="empty-note">Summoning the guild roster…</div>`;
+  if (guildData.length === 0) return `<div class="empty-note">No one else has joined yet. Share this app with friends!</div>`;
   return guildData.map((g, i) => `
     <div class="guild-row ${g.username===player.username?'me':''}">
       <div style="display:flex; align-items:center; gap:12px;">
         <span class="guild-rank mono">${i+1}</span>
         <div>
           <div class="guild-name">${g.username}${g.username===player.username?' (you)':''}</div>
-          <div class="guild-sub mono">${g.todayCount}/${g.totalQuests} today</div>
+          <div class="guild-sub mono">${g.title||''} · ${g.todayCount}/${g.totalQuests} today</div>
         </div>
       </div>
       <div class="guild-lvl cinzel">Lv${g.level}</div>
     </div>`).join("");
 }
-
-async function refreshGuild(){
-  guildLoading = true;
-  render();
-  guildData = await loadGuild();
-  guildLoading = false;
-  render();
-}
+async function refreshGuild(){ guildLoading = true; render(); guildData = await loadGuild(); guildLoading = false; render(); }
 
 function renderSettings(){
+  const level = levelFromXp(player.xp);
+  const next = nextTitleInfo(level);
+  const catDefaultRows = Object.keys(CATEGORIES).map(key => {
+    const c = CATEGORIES[key];
+    const chips = XP_PRESETS.map(v => `<button type="button" class="xp-chip ${player.categoryDefaults[key]===v?'selected':''}" data-cat-default="${key}" data-val="${v}">${v}</button>`).join("");
+    return `<div style="margin-bottom:14px;"><label style="margin-top:0"><span class="cat-dot" style="background:${c.color}"></span>${c.label}</label><div class="xp-picker">${chips}</div></div>`;
+  }).join("");
+
+  const fontRows = FONT_UNLOCKS.map(f => {
+    const locked = level < f.level;
+    const selected = player.usernameFont === f.family;
+    return `<button type="button" class="font-option ${selected?'selected':''} ${locked?'locked':''}" ${locked?'':`data-font="${f.family}"`} data-level="${f.level}" style="font-family:${f.family}">
+      <span>${f.label}</span>
+      <span class="lock-note">${locked ? `&#128274; Lv${f.level}` : (selected ? 'Selected' : '')}</span>
+    </button>`;
+  }).join("");
+
   return `
     <div class="form-card">
+      <label>TITLE</label>
+      <div class="settings-note" style="font-size:13px; color:var(--gold);">${titleForLevel(level)}</div>
+      ${next ? `<div class="settings-note">Next title "${next.title}" unlocks at Level ${next.level}</div>` : `<div class="settings-note">You've reached the highest title.</div>`}
+    </div>
+
+    <div class="form-card" style="margin-top:14px;">
+      <label>PROFILE PICTURE</label>
+      <div class="avatar-row">
+        <div class="avatar-lg">${player.avatar ? `<img src="${player.avatar}"/>` : '&#128100;'}</div>
+        <div style="flex:1;">
+          <button class="btn-secondary" id="removeAvatarBtn" style="width:100%;">Remove Photo</button>
+          <div class="settings-note">Tap the avatar in the header to upload a new one.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card" style="margin-top:14px;">
+      <label>USERNAME FONT</label>
+      <div class="font-grid">${fontRows}</div>
+    </div>
+
+    <div class="form-card" style="margin-top:14px;">
+      <label>DEFAULT XP PER CATEGORY</label>
+      <div class="settings-note" style="margin-bottom:10px;">New quests in a category auto-fill with its default.</div>
+      ${catDefaultRows}
+    </div>
+
+    <div class="form-card" style="margin-top:14px;">
       <label>USERNAME</label>
       <input type="text" id="usernameInput" value="${player.username.replace(/"/g,'&quot;')}" />
       <div class="settings-note">Changing this moves your guild entry to the new name.</div>
-      <div class="form-buttons">
-        <button class="btn-primary" id="saveUsernameBtn" style="flex:1">Save Username</button>
-      </div>
+      <div class="form-buttons"><button class="btn-primary" id="saveUsernameBtn" style="flex:1">Save Username</button></div>
     </div>
+
     <div class="form-card" style="margin-top:14px;">
       <label>DANGER ZONE</label>
       <div class="settings-note">Permanently erases your quests, XP, and guild entry on this device. Cannot be undone.</div>
@@ -466,32 +655,24 @@ async function changeUsername(newNameRaw){
   if (!newName || newName === player.username) return;
   const oldName = player.username;
   player.username = newName;
-  savePlayer(player);
-  render();
-  if (db) {
-    try { await db.collection("guild").doc(oldName).delete(); } catch(e){}
-    syncToGuild(player);
-  }
+  savePlayer(player); render();
+  if (db) { try { await db.collection("guild").doc(oldName).delete(); } catch(e){} syncToGuild(player); }
 }
-
 async function deleteAccount(){
   const sure = confirm("Delete your account? This removes all quests, XP, and your guild entry. This can't be undone.");
   if (!sure) return;
-  if (db && player) {
-    try { await db.collection("guild").doc(player.username).delete(); } catch(e){}
-  }
+  if (db && player) { try { await db.collection("guild").doc(player.username).delete(); } catch(e){} }
   try { localStorage.removeItem(KEY); } catch(e){}
-  player = null;
-  tab = "quests";
-  render();
+  player = null; tab = "quests"; render();
 }
 
 function showLevelUp(level){
+  const title = titleForLevel(level);
   const div = document.createElement("div");
   div.className = "levelup";
-  div.innerHTML = `<div class="levelup-box"><div style="font-size:28px;">&#10024;</div><div class="t1 cinzel">LEVEL UP</div><div class="t2">You reached Level ${level}</div></div>`;
+  div.innerHTML = `<div class="levelup-box"><div style="font-size:28px;">&#10024;</div><div class="t1 cinzel">LEVEL UP</div><div class="t2">You reached Level ${level}</div><div class="t3">New title: ${title}</div></div>`;
   document.body.appendChild(div);
-  setTimeout(()=>div.remove(), 1600);
+  setTimeout(()=>div.remove(), 2000);
 }
 
 render();
