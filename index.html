@@ -33,8 +33,8 @@
   .bar-bg { background:var(--ink); border-radius:999px; height:10px; overflow:hidden; border:1px solid var(--gold-dim); }
   .bar-fill { background:linear-gradient(90deg,var(--gold-dim),var(--gold)); height:100%; transition:width .4s; }
   .xp-label { color:var(--parchment-dim); font-size:12px; margin-top:6px; }
-  .tabs { display:flex; gap:6px; padding:16px 20px 0; }
-  .tab { flex:1; background:transparent; border:1px solid transparent; border-radius:6px; color:var(--parchment-dim); padding:9px 0; font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .tabs { display:flex; gap:5px; padding:14px 14px 0; overflow-x:auto; }
+  .tab { flex:1; min-width:40px; background:transparent; border:1px solid transparent; border-radius:6px; color:var(--parchment-dim); padding:9px 0; font-size:15px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .tab.active { background:var(--panel-light); color:var(--gold); border-color:var(--gold-dim); }
   .content { padding:16px 20px; }
   .cat-header { color:var(--parchment-dim); font-size:11px; letter-spacing:0.08em; margin:16px 0 8px; }
@@ -49,6 +49,7 @@
   .quest-meta { display:flex; gap:8px; margin-top:3px; flex-wrap:wrap; }
   .quest-meta span { font-size:11px; }
   .xp-tag { color:var(--gold-dim); }
+  .freq-tag { color:var(--sapphire); border:1px solid var(--sapphire); border-radius:3px; padding:0 5px; }
   .streak-tag { color:var(--ruby); display:flex; align-items:center; gap:2px; }
   .quest-actions { display:flex; align-items:center; gap:2px; flex-shrink:0; }
   .icon-btn { background:none; border:none; color:var(--parchment-dim); font-size:15px; padding:4px 7px; cursor:pointer; }
@@ -56,7 +57,8 @@
   .form-card { background:var(--panel); border-radius:6px; padding:16px; }
   .form-card label { display:block; color:var(--parchment-dim); font-size:11px; margin:12px 0 6px; letter-spacing:0.05em; }
   .form-card label:first-child { margin-top:0; }
-  .form-card input[type=text], .form-card input[type=number] { width:100%; background:var(--ink); color:var(--parchment); border:1px solid var(--gold-dim); border-radius:5px; padding:9px 12px; font-size:14px; outline:none; font-family:'Spectral',serif; }
+  .form-card input[type=text], .form-card input[type=number], .form-card input[type=date], .form-card textarea { width:100%; background:var(--ink); color:var(--parchment); border:1px solid var(--gold-dim); border-radius:5px; padding:9px 12px; font-size:14px; outline:none; font-family:'Spectral',serif; }
+  .form-card textarea { min-height:140px; resize:vertical; line-height:1.5; }
   .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   .cat-picker { display:flex; gap:8px; flex-wrap:wrap; }
   .cat-chip { padding:7px 12px; border-radius:999px; font-size:12px; border:1.5px solid var(--gold-dim); background:transparent; color:var(--parchment-dim); cursor:pointer; font-family:'Spectral',serif; }
@@ -111,9 +113,15 @@
   .avatar-lg img { width:100%; height:100%; object-fit:cover; }
   .exercise-row { display:flex; align-items:center; justify-content:space-between; background:var(--ink); border-radius:5px; padding:8px 12px; margin-bottom:6px; }
   .exercise-name { font-size:13px; }
-  .exercise-detail { color:var(--parchment-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; }
+  .exercise-detail { color:var(--parchment-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; display:flex; align-items:center; gap:6px; }
   .workout-log-card { background:var(--panel); border-radius:6px; padding:14px 16px; margin-bottom:10px; }
   .workout-log-date { color:var(--gold-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; margin-bottom:8px; }
+  .routine-chip { display:inline-flex; align-items:center; gap:6px; background:var(--ink); border:1px solid var(--gold-dim); border-radius:999px; padding:6px 12px; font-size:12px; margin:0 6px 6px 0; cursor:pointer; }
+  .journal-entry { background:var(--panel); border-radius:6px; padding:14px 16px; margin-bottom:10px; }
+  .journal-title { font-size:15px; color:var(--parchment); margin-bottom:2px; }
+  .journal-date { color:var(--gold-dim); font-size:11px; font-family:'IBM Plex Mono',monospace; margin-bottom:8px; }
+  .journal-snippet { color:var(--parchment-dim); font-size:13px; line-height:1.5; white-space:pre-wrap; }
+  .journal-actions { display:flex; justify-content:flex-end; gap:4px; margin-top:8px; }
 </style>
 </head>
 <body>
@@ -151,11 +159,19 @@ const CATEGORIES = {
 };
 const XP_PRESETS = [5,10,15,20,25,30];
 const DEFAULT_CATEGORY_XP = { health:20, mind:15, tasks:10, other:10 };
+const EXERCISE_XP = 5;
 const STARTER_QUESTS = [
-  { id:"q1", name:"Morning routine", xp:15, category:"mind", history:{} },
-  { id:"q2", name:"Gym", xp:20, category:"health", history:{} },
-  { id:"q3", name:"Daily tasks", xp:10, category:"tasks", history:{} },
+  { id:"q1", name:"Morning routine", xp:15, category:"mind", frequency:"daily", history:{}, completed:false },
+  { id:"q2", name:"Gym", xp:20, category:"health", frequency:"daily", history:{}, completed:false },
+  { id:"q3", name:"Daily tasks", xp:10, category:"tasks", frequency:"daily", history:{}, completed:false },
 ];
+const FREQUENCIES = [
+  {key:"daily", label:"Daily"},
+  {key:"weekly", label:"Weekly"},
+  {key:"once", label:"Until Done"},
+];
+const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+const DAY_LABELS = {sun:"Sunday", mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday"};
 
 const TITLES = [
   {level:1, title:"Squire"}, {level:2, title:"Page"}, {level:3, title:"Journeyman"},
@@ -166,15 +182,8 @@ const TITLES = [
   {level:16, title:"High Knight"}, {level:17, title:"Lord Commander"}, {level:18, title:"Grand Duke"},
   {level:19, title:"Archduke"}, {level:20, title:"Sovereign"},
 ];
-function titleForLevel(level){
-  let current = TITLES[0].title;
-  for (const t of TITLES) { if (level >= t.level) current = t.title; else break; }
-  return current;
-}
-function nextTitleInfo(level){
-  const next = TITLES.find(t => t.level > level);
-  return next || null;
-}
+function titleForLevel(level){ let c = TITLES[0].title; for (const t of TITLES) { if (level >= t.level) c = t.title; else break; } return c; }
+function nextTitleInfo(level){ return TITLES.find(t => t.level > level) || null; }
 
 const FONT_UNLOCKS = [
   {level:1,  family:"'Spectral', serif",              label:"Spectral"},
@@ -189,6 +198,15 @@ const FONT_UNLOCKS = [
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+function todayDayKey(){ return DAY_KEYS[new Date().getDay()]; }
+function weekKeyFor(date){
+  const d = new Date(date); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - ((d.getDay()+6)%7));
+  const week1 = new Date(d.getFullYear(),0,4);
+  const weekNo = 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay()+6)%7))/7);
+  return d.getFullYear()+"-W"+weekNo;
+}
+function todayWeekKey(){ return weekKeyFor(new Date()); }
 function computeStreak(history){
   let streak=0, i=0;
   let cursor = history[todayStr()] ? todayStr() : daysAgoStr(1);
@@ -196,6 +214,8 @@ function computeStreak(history){
   return streak;
 }
 function levelFromXp(xp){ return Math.floor(xp/100)+1; }
+function questPeriodKey(q){ return q.frequency === "weekly" ? todayWeekKey() : todayStr(); }
+function isQuestDone(q){ return q.frequency === "once" ? !!q.completed : !!q.history[questPeriodKey(q)]; }
 
 function ensurePlayerShape(p){
   if (!p.categoryDefaults) p.categoryDefaults = { ...DEFAULT_CATEGORY_XP };
@@ -203,6 +223,14 @@ function ensurePlayerShape(p){
   if (!p.workoutHistory) p.workoutHistory = {};
   if (!p.avatar) p.avatar = null;
   if (!p.usernameFont) p.usernameFont = FONT_UNLOCKS[0].family;
+  if (!p.routine) p.routine = { sun:[], mon:[], tue:[], wed:[], thu:[], fri:[], sat:[] };
+  DAY_KEYS.forEach(k => { if (!Array.isArray(p.routine[k])) p.routine[k] = []; });
+  if (!p.journalEntries) p.journalEntries = [];
+  p.quests.forEach(q => {
+    if (!q.frequency) q.frequency = "daily";
+    if (typeof q.completed !== "boolean") q.completed = false;
+    if (!q.history) q.history = {};
+  });
   return p;
 }
 function loadPlayer(){ try { const raw = localStorage.getItem(KEY); return raw ? ensurePlayerShape(JSON.parse(raw)) : null; } catch(e){ return null; } }
@@ -210,7 +238,7 @@ function savePlayer(p){ try { localStorage.setItem(KEY, JSON.stringify(p)); } ca
 
 async function syncToGuild(p){
   if (!db) return;
-  const todayCount = p.quests.filter(q => q.history[todayStr()]).length;
+  const todayCount = p.quests.filter(q => isQuestDone(q)).length;
   try {
     await db.collection("guild").doc(p.username).set({
       username: p.username, xp: p.xp, level: levelFromXp(p.xp),
@@ -232,13 +260,20 @@ let editingId = null;
 let formName = "";
 let formCategory = "health";
 let formXp = 10;
+let formFrequency = "daily";
 let guildData = [];
 let guildLoading = false;
 let workoutDraft = [];
 let wName = "", wSets = 3, wReps = 10, wWeight = 0;
+let routineEditorOpen = false;
+let routineDraftName = "";
+let routineDraftDay = "mon";
+let journalFormOpen = false;
+let journalEditingId = null;
+let jDate = "", jTitle = "", jBody = "";
 
-function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = player.categoryDefaults.health; render(); }
-function openEditForm(q){ formOpen = true; editingId = q.id; formName = q.name; formCategory = q.category || "other"; formXp = q.xp; render(); }
+function openAddForm(){ formOpen = true; editingId = null; formName = ""; formCategory = "health"; formXp = player.categoryDefaults.health; formFrequency = "daily"; render(); }
+function openEditForm(q){ formOpen = true; editingId = q.id; formName = q.name; formCategory = q.category || "other"; formXp = q.xp; formFrequency = q.frequency || "daily"; render(); }
 function closeForm(){ formOpen = false; editingId = null; render(); }
 
 function render(){
@@ -285,6 +320,7 @@ function render(){
       bodyHtml += `<button class="add-btn" id="showAddBtn">+ Add a quest</button>`;
     }
   } else if (tab === "workout") { bodyHtml = renderWorkout(); }
+  else if (tab === "journal") { bodyHtml = renderJournal(); }
   else if (tab === "stats") { bodyHtml = renderStats(); }
   else if (tab === "guild") { bodyHtml = renderGuild(); }
   else if (tab === "settings") { bodyHtml = renderSettings(); }
@@ -308,6 +344,7 @@ function render(){
     <div class="tabs">
       <button class="tab ${tab==='quests'?'active':''}" data-tab="quests" title="Quests">&#128220;</button>
       <button class="tab ${tab==='workout'?'active':''}" data-tab="workout" title="Workout">&#128170;</button>
+      <button class="tab ${tab==='journal'?'active':''}" data-tab="journal" title="Journal">&#128214;</button>
       <button class="tab ${tab==='stats'?'active':''}" data-tab="stats" title="Stats">&#127942;</button>
       <button class="tab ${tab==='guild'?'active':''}" data-tab="guild" title="Guild">&#128101;</button>
       <button class="tab ${tab==='settings'?'active':''}" data-tab="settings" title="Settings">&#9881;</button>
@@ -318,12 +355,13 @@ function render(){
   document.getElementById("avatarInput").addEventListener("change", handleAvatarUpload);
 
   document.querySelectorAll("[data-tab]").forEach(el=>{
-    el.onclick = () => { tab = el.getAttribute("data-tab"); formOpen=false; render(); if (tab === "guild") refreshGuild(); };
+    el.onclick = () => { tab = el.getAttribute("data-tab"); formOpen=false; journalFormOpen=false; render(); if (tab === "guild") refreshGuild(); };
   });
 
   if (tab === "quests" && formOpen) {
     document.querySelectorAll("[data-cat]").forEach(el=>{ el.onclick = () => { formCategory = el.getAttribute("data-cat"); formXp = player.categoryDefaults[formCategory]; render(); }; });
     document.querySelectorAll("[data-xp]").forEach(el=>{ el.onclick = () => { formXp = parseInt(el.getAttribute("data-xp")); render(); }; });
+    document.querySelectorAll("[data-freq]").forEach(el=>{ el.onclick = () => { formFrequency = el.getAttribute("data-freq"); render(); }; });
     const saveBtn = document.getElementById("saveQuestBtn"); if (saveBtn) saveBtn.onclick = saveQuestFromForm;
     const cancelBtn = document.getElementById("cancelFormBtn"); if (cancelBtn) cancelBtn.onclick = closeForm;
     const nameInput = document.getElementById("questNameInput");
@@ -336,41 +374,46 @@ function render(){
   }
 
   if (tab === "workout") {
-    const wNameInput = document.getElementById("wNameInput");
-    if (wNameInput) wNameInput.oninput = e => wName = e.target.value;
-    const wSetsInput = document.getElementById("wSetsInput");
-    if (wSetsInput) wSetsInput.oninput = e => wSets = parseInt(e.target.value)||0;
-    const wRepsInput = document.getElementById("wRepsInput");
-    if (wRepsInput) wRepsInput.oninput = e => wReps = parseInt(e.target.value)||0;
-    const wWeightInput = document.getElementById("wWeightInput");
-    if (wWeightInput) wWeightInput.oninput = e => wWeight = parseInt(e.target.value)||0;
+    const wNameInput = document.getElementById("wNameInput"); if (wNameInput) wNameInput.oninput = e => wName = e.target.value;
+    const wSetsInput = document.getElementById("wSetsInput"); if (wSetsInput) wSetsInput.oninput = e => wSets = parseInt(e.target.value)||0;
+    const wRepsInput = document.getElementById("wRepsInput"); if (wRepsInput) wRepsInput.oninput = e => wReps = parseInt(e.target.value)||0;
+    const wWeightInput = document.getElementById("wWeightInput"); if (wWeightInput) wWeightInput.oninput = e => wWeight = parseInt(e.target.value)||0;
     const addExBtn = document.getElementById("addExerciseBtn"); if (addExBtn) addExBtn.onclick = addExerciseToDraft;
     document.querySelectorAll("[data-remove-ex]").forEach(el=>{ el.onclick = () => { workoutDraft.splice(parseInt(el.getAttribute("data-remove-ex")),1); render(); }; });
     const saveWBtn = document.getElementById("saveWorkoutBtn"); if (saveWBtn) saveWBtn.onclick = saveWorkout;
     const editWBtn = document.getElementById("editWorkoutBtn"); if (editWBtn) editWBtn.onclick = () => { workoutDraft = [...(player.workoutHistory[todayStr()]||[])]; delete player.workoutHistory[todayStr()]; savePlayer(player); render(); };
+    document.querySelectorAll("[data-quick-add]").forEach(el=>{ el.onclick = () => { workoutDraft.push({ name: el.getAttribute("data-quick-add"), sets:3, reps:10, weight:0 }); render(); }; });
+    const editRoutineBtn = document.getElementById("editRoutineBtn"); if (editRoutineBtn) editRoutineBtn.onclick = () => { routineEditorOpen = true; render(); };
+    const closeRoutineBtn = document.getElementById("closeRoutineBtn"); if (closeRoutineBtn) closeRoutineBtn.onclick = () => { routineEditorOpen = false; render(); };
+    document.querySelectorAll("[data-routine-day-select]").forEach(el=>{ el.onclick = () => { routineDraftDay = el.getAttribute("data-routine-day-select"); render(); }; });
+    const routineNameInput = document.getElementById("routineNameInput"); if (routineNameInput) routineNameInput.oninput = e => routineDraftName = e.target.value;
+    const addRoutineExBtn = document.getElementById("addRoutineExBtn"); if (addRoutineExBtn) addRoutineExBtn.onclick = addRoutineExercise;
+    document.querySelectorAll("[data-remove-routine-ex]").forEach(el=>{ el.onclick = () => { const day = el.getAttribute("data-day"); const idx = parseInt(el.getAttribute("data-remove-routine-ex")); player.routine[day].splice(idx,1); savePlayer(player); render(); }; });
+  }
+
+  if (tab === "journal") {
+    if (journalFormOpen) {
+      const jTitleInput = document.getElementById("jTitleInput"); if (jTitleInput) jTitleInput.oninput = e => jTitle = e.target.value;
+      const jDateInput = document.getElementById("jDateInput"); if (jDateInput) jDateInput.oninput = e => jDate = e.target.value;
+      const jBodyInput = document.getElementById("jBodyInput"); if (jBodyInput) jBodyInput.oninput = e => jBody = e.target.value;
+      const saveJBtn = document.getElementById("saveJournalBtn"); if (saveJBtn) saveJBtn.onclick = saveJournalEntry;
+      const cancelJBtn = document.getElementById("cancelJournalBtn"); if (cancelJBtn) cancelJBtn.onclick = () => { journalFormOpen = false; render(); };
+    } else {
+      const newJBtn = document.getElementById("newJournalBtn"); if (newJBtn) newJBtn.onclick = openJournalForm;
+      document.querySelectorAll("[data-journal-edit]").forEach(el=>{ el.onclick = () => { const en = player.journalEntries.find(x=>x.id===el.getAttribute("data-journal-edit")); openJournalEdit(en); }; });
+      document.querySelectorAll("[data-journal-remove]").forEach(el=>{ el.onclick = () => { player.journalEntries = player.journalEntries.filter(x=>x.id!==el.getAttribute("data-journal-remove")); savePlayer(player); render(); }; });
+    }
   }
 
   if (tab === "settings") {
-    const saveNameBtn = document.getElementById("saveUsernameBtn");
-    if (saveNameBtn) saveNameBtn.onclick = () => { changeUsername(document.getElementById("usernameInput").value); };
+    const saveNameBtn = document.getElementById("saveUsernameBtn"); if (saveNameBtn) saveNameBtn.onclick = () => { changeUsername(document.getElementById("usernameInput").value); };
     const deleteBtn = document.getElementById("deleteAccountBtn"); if (deleteBtn) deleteBtn.onclick = deleteAccount;
-    const removeAvatarBtn = document.getElementById("removeAvatarBtn");
-    if (removeAvatarBtn) removeAvatarBtn.onclick = () => { player.avatar = null; savePlayer(player); render(); };
+    const removeAvatarBtn = document.getElementById("removeAvatarBtn"); if (removeAvatarBtn) removeAvatarBtn.onclick = () => { player.avatar = null; savePlayer(player); render(); };
     document.querySelectorAll("[data-font]").forEach(el=>{
-      el.onclick = () => {
-        const lvl = parseInt(el.getAttribute("data-level"));
-        if (level < lvl) return;
-        player.usernameFont = el.getAttribute("data-font");
-        savePlayer(player); render();
-      };
+      el.onclick = () => { const lvl = parseInt(el.getAttribute("data-level")); if (level < lvl) return; player.usernameFont = el.getAttribute("data-font"); savePlayer(player); render(); };
     });
     document.querySelectorAll("[data-cat-default]").forEach(el=>{
-      el.onclick = () => {
-        const cat = el.getAttribute("data-cat-default");
-        const val = parseInt(el.getAttribute("data-val"));
-        player.categoryDefaults[cat] = val;
-        savePlayer(player); render();
-      };
+      el.onclick = () => { const cat = el.getAttribute("data-cat-default"); const val = parseInt(el.getAttribute("data-val")); player.categoryDefaults[cat] = val; savePlayer(player); render(); };
     });
   }
 }
@@ -399,8 +442,9 @@ function handleAvatarUpload(e){
 }
 
 function renderQuest(q, catInfo){
-  const done = !!q.history[todayStr()];
-  const streak = computeStreak(q.history);
+  const done = isQuestDone(q);
+  const streak = q.frequency === "daily" ? computeStreak(q.history) : 0;
+  const freqLabel = FREQUENCIES.find(f=>f.key===(q.frequency||"daily")).label;
   return `
     <div class="quest ${done?'done':''}" style="border-left:3px solid ${catInfo.color}">
       <div class="quest-left" data-toggle="${q.id}">
@@ -409,6 +453,7 @@ function renderQuest(q, catInfo){
           <div class="quest-name">${q.name}</div>
           <div class="quest-meta">
             <span class="mono xp-tag">+${q.xp} XP</span>
+            ${q.frequency!=="daily" ? `<span class="mono freq-tag">${freqLabel}</span>` : ''}
             ${streak>0?`<span class="mono streak-tag">&#128293; ${streak}</span>`:''}
           </div>
         </div>
@@ -426,12 +471,15 @@ function renderForm(){
     return `<button type="button" class="cat-chip ${sel?'selected':''}" data-cat="${key}" style="${sel?`background:${c.color};border-color:${c.color}`:''}">${c.label}</button>`;
   }).join("");
   let xpChips = XP_PRESETS.map(v => `<button type="button" class="xp-chip ${formXp===v?'selected':''}" data-xp="${v}">${v}</button>`).join("");
+  let freqChips = FREQUENCIES.map(f => `<button type="button" class="cat-chip ${formFrequency===f.key?'selected':''}" data-freq="${f.key}" style="${formFrequency===f.key?'background:var(--sapphire);border-color:var(--sapphire)':''}">${f.label}</button>`).join("");
   return `
     <div class="form-card">
       <label>QUEST NAME</label>
       <input type="text" id="questNameInput" value="${formName.replace(/"/g,'&quot;')}" placeholder="e.g. Read 20 minutes" />
       <label>CATEGORY</label>
       <div class="cat-picker">${catChips}</div>
+      <label>FREQUENCY</label>
+      <div class="cat-picker">${freqChips}</div>
       <label>XP VALUE</label>
       <div class="xp-picker">${xpChips}</div>
       <div class="form-buttons">
@@ -445,18 +493,27 @@ async function saveQuestFromForm(){
   const nameInput = document.getElementById("questNameInput");
   const name = (nameInput ? nameInput.value : formName).trim();
   if (!name) return;
-  if (editingId) { const q = player.quests.find(x=>x.id===editingId); q.name = name; q.category = formCategory; q.xp = formXp; }
-  else { player.quests.push({ id:"q"+Date.now(), name, xp:formXp, category:formCategory, history:{} }); }
+  if (editingId) {
+    const q = player.quests.find(x=>x.id===editingId);
+    q.name = name; q.category = formCategory; q.xp = formXp; q.frequency = formFrequency;
+  } else {
+    player.quests.push({ id:"q"+Date.now(), name, xp:formXp, category:formCategory, frequency:formFrequency, history:{}, completed:false });
+  }
   savePlayer(player); formOpen = false; editingId = null; render(); syncToGuild(player);
 }
 
 async function toggleQuest(qid){
   const q = player.quests.find(x=>x.id===qid);
-  const t = todayStr();
-  const wasDone = !!q.history[t];
   const prevLevel = levelFromXp(player.xp);
-  if (wasDone){ delete q.history[t]; player.xp = Math.max(0, player.xp - q.xp); }
-  else { q.history[t] = true; player.xp += q.xp; }
+  if (q.frequency === "once") {
+    if (q.completed) { q.completed = false; player.xp = Math.max(0, player.xp - q.xp); }
+    else { q.completed = true; player.xp += q.xp; }
+  } else {
+    const key = questPeriodKey(q);
+    const wasDone = !!q.history[key];
+    if (wasDone) { delete q.history[key]; player.xp = Math.max(0, player.xp - q.xp); }
+    else { q.history[key] = true; player.xp += q.xp; }
+  }
   const newLevel = levelFromXp(player.xp);
   savePlayer(player); render();
   if (newLevel > prevLevel) showLevelUp(newLevel);
@@ -470,16 +527,22 @@ function addExerciseToDraft(){
   workoutDraft.push({ name, sets: wSets||0, reps: wReps||0, weight: wWeight||0 });
   wName = ""; render();
 }
+function addRoutineExercise(){
+  const name = (document.getElementById("routineNameInput").value || "").trim();
+  if (!name) return;
+  player.routine[routineDraftDay].push(name);
+  routineDraftName = "";
+  savePlayer(player); render();
+}
 
 async function saveWorkout(){
   if (workoutDraft.length === 0) return;
   const t = todayStr();
-  const alreadyLoggedToday = false; // draft flow already prevents double count since history entry only set here
   const prevLevel = levelFromXp(player.xp);
   player.workoutHistory[t] = workoutDraft;
-  player.xp += player.categoryDefaults.health;
-  const gymQuest = player.quests.find(q => q.category === "health" && !q.history[t]);
-  if (gymQuest) gymQuest.history[t] = true;
+  player.xp += workoutDraft.length * EXERCISE_XP;
+  const gymQuest = player.quests.find(q => q.category === "health" && q.frequency !== "once" && !isQuestDone(q));
+  if (gymQuest) { gymQuest.history[questPeriodKey(gymQuest)] = true; player.xp += gymQuest.xp; }
   workoutDraft = [];
   const newLevel = levelFromXp(player.xp);
   savePlayer(player); render();
@@ -488,18 +551,24 @@ async function saveWorkout(){
 }
 
 function renderWorkout(){
+  if (routineEditorOpen) return renderRoutineEditor();
   const t = todayStr();
   const logged = player.workoutHistory[t];
+  const dayKey = todayDayKey();
+  const plannedToday = player.routine[dayKey] || [];
   let html = "";
+
+  if (plannedToday.length > 0 && !(logged && workoutDraft.length === 0)) {
+    html += `<div class="week-title mono">${DAY_LABELS[dayKey].toUpperCase()}'S ROUTINE</div><div style="margin-bottom:14px;">`;
+    plannedToday.forEach(name => { html += `<span class="routine-chip" data-quick-add="${name.replace(/"/g,'&quot;')}">+ ${name}</span>`; });
+    html += `</div>`;
+  }
+
   if (logged && workoutDraft.length === 0) {
     html += `
       <div class="workout-log-card">
         <div class="workout-log-date mono">TODAY — LOGGED &#10003;</div>
-        ${logged.map(ex => `
-          <div class="exercise-row">
-            <span class="exercise-name">${ex.name}</span>
-            <span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''}</span>
-          </div>`).join("")}
+        ${logged.map(ex => `<div class="exercise-row"><span class="exercise-name">${ex.name}</span><span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''}</span></div>`).join("")}
         <button class="btn-secondary" id="editWorkoutBtn" style="width:100%; margin-top:10px;">Edit Today's Workout</button>
       </div>`;
   } else {
@@ -513,18 +582,19 @@ function renderWorkout(){
           <input type="number" id="wRepsInput" value="${wReps}" min="0" />
           <input type="number" id="wWeightInput" value="${wWeight}" min="0" />
         </div>
-        <div class="form-buttons">
-          <button class="btn-primary" id="addExerciseBtn" style="flex:1">+ Add Exercise</button>
-        </div>
+        <div class="form-buttons"><button class="btn-primary" id="addExerciseBtn" style="flex:1">+ Add Exercise</button></div>
       </div>`;
     if (workoutDraft.length > 0) {
       html += `<div class="workout-log-card" style="margin-top:12px;">`;
       workoutDraft.forEach((ex, i) => {
         html += `<div class="exercise-row"><span class="exercise-name">${ex.name}</span><span class="exercise-detail">${ex.sets}x${ex.reps}${ex.weight?` @ ${ex.weight}lb`:''} <button class="icon-btn" data-remove-ex="${i}">&#10005;</button></span></div>`;
       });
-      html += `<button class="btn-primary" id="saveWorkoutBtn" style="width:100%; margin-top:10px;">Save Workout (+${player.categoryDefaults.health} XP)</button></div>`;
+      const projectedXp = workoutDraft.length * EXERCISE_XP;
+      html += `<button class="btn-primary" id="saveWorkoutBtn" style="width:100%; margin-top:10px;">Save Workout (+${projectedXp} XP)</button></div>`;
     }
   }
+
+  html += `<button class="btn-secondary" id="editRoutineBtn" style="width:100%; margin-top:14px;">&#128197; Edit Weekly Routine</button>`;
 
   const recentDates = Object.keys(player.workoutHistory).filter(d => d !== t).sort().reverse().slice(0,5);
   if (recentDates.length > 0) {
@@ -537,22 +607,89 @@ function renderWorkout(){
   return html;
 }
 
+function renderRoutineEditor(){
+  let dayTabs = DAY_KEYS.map(k => `<button type="button" class="cat-chip ${routineDraftDay===k?'selected':''}" data-routine-day-select="${k}" style="${routineDraftDay===k?'background:var(--sapphire);border-color:var(--sapphire)':''}">${DAY_LABELS[k].slice(0,3)}</button>`).join("");
+  const exercises = player.routine[routineDraftDay] || [];
+  let exList = exercises.map((name, i) => `<div class="exercise-row"><span class="exercise-name">${name}</span><button class="icon-btn" data-remove-routine-ex="${i}" data-day="${routineDraftDay}">&#10005;</button></div>`).join("");
+  return `
+    <div class="form-card">
+      <label>PICK A DAY</label>
+      <div class="cat-picker">${dayTabs}</div>
+      <label>${DAY_LABELS[routineDraftDay].toUpperCase()} EXERCISES</label>
+      ${exList || '<div class="settings-note">No exercises planned yet.</div>'}
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <input type="text" id="routineNameInput" placeholder="Add exercise" value="${routineDraftName.replace(/"/g,'&quot;')}" style="flex:1;" />
+        <button class="btn-primary" id="addRoutineExBtn" style="flex:0 0 auto; padding:0 16px;">Add</button>
+      </div>
+      <div class="form-buttons"><button class="btn-secondary" id="closeRoutineBtn" style="flex:1;">Done</button></div>
+    </div>`;
+}
+
+function openJournalForm(){ journalFormOpen = true; journalEditingId = null; jDate = todayStr(); jTitle = ""; jBody = ""; render(); }
+function openJournalEdit(entry){ journalFormOpen = true; journalEditingId = entry.id; jDate = entry.date; jTitle = entry.title; jBody = entry.body; render(); }
+function saveJournalEntry(){
+  const title = (jTitle || "").trim() || "Untitled Entry";
+  const date = jDate || todayStr();
+  const body = jBody || "";
+  if (journalEditingId) {
+    const e = player.journalEntries.find(x=>x.id===journalEditingId);
+    e.title = title; e.date = date; e.body = body;
+  } else {
+    player.journalEntries.push({ id:"j"+Date.now(), title, date, body });
+  }
+  savePlayer(player); journalFormOpen = false; journalEditingId = null; render();
+}
+function renderJournal(){
+  if (journalFormOpen) {
+    return `
+      <div class="form-card">
+        <label>TITLE</label>
+        <input type="text" id="jTitleInput" value="${jTitle.replace(/"/g,'&quot;')}" placeholder="A day worth remembering" />
+        <label>DATE</label>
+        <input type="date" id="jDateInput" value="${jDate}" />
+        <label>ENTRY</label>
+        <textarea id="jBodyInput" placeholder="Write what's on your mind...">${jBody}</textarea>
+        <div class="form-buttons">
+          <button class="btn-secondary" id="cancelJournalBtn">Cancel</button>
+          <button class="btn-primary" id="saveJournalBtn">${journalEditingId ? 'Save Changes' : 'Save Entry'}</button>
+        </div>
+      </div>`;
+  }
+  const entries = [...player.journalEntries].sort((a,b) => b.date.localeCompare(a.date));
+  let html = `<button class="add-btn" id="newJournalBtn">+ New Entry</button>`;
+  if (entries.length === 0) {
+    html += `<div class="empty-note">No entries yet. Your story starts whenever you're ready.</div>`;
+  } else {
+    html += entries.map(e => `
+      <div class="journal-entry" style="margin-top:12px;">
+        <div class="journal-title cinzel">${e.title}</div>
+        <div class="journal-date mono">${e.date}</div>
+        <div class="journal-snippet">${(e.body||"").slice(0,220)}${(e.body||"").length>220?'…':''}</div>
+        <div class="journal-actions">
+          <button class="icon-btn" data-journal-edit="${e.id}">&#9998;</button>
+          <button class="icon-btn" data-journal-remove="${e.id}">&#10005;</button>
+        </div>
+      </div>`).join("");
+  }
+  return html;
+}
+
 function renderStats(){
   let weekBars = "";
   for (let idx=0; idx<7; idx++){
     const dateStr = daysAgoStr(6-idx);
-    const completed = player.quests.filter(q=>q.history[dateStr]).length;
-    const total = player.quests.length || 1;
+    const completed = player.quests.filter(q=>q.frequency==="daily" && q.history[dateStr]).length;
+    const total = player.quests.filter(q=>q.frequency==="daily").length || 1;
     const pct = Math.round((completed/total)*100);
     const label = new Date(dateStr).toLocaleDateString(undefined,{weekday:'narrow'});
     weekBars += `<div class="day-col"><div class="day-track"><div class="day-fill" style="height:${pct}%; background:${pct===100?'var(--gold)':'var(--sapphire)'}"></div></div><div class="day-label mono">${label}</div></div>`;
   }
-  const bestStreak = Math.max(0, ...player.quests.map(q=>computeStreak(q.history)), 0);
+  const bestStreak = Math.max(0, ...player.quests.filter(q=>q.frequency==="daily").map(q=>computeStreak(q.history)), 0);
   const catTotals = {};
   Object.keys(CATEGORIES).forEach(k => catTotals[k] = 0);
   player.quests.forEach(q => {
     const cat = q.category || "other";
-    const completions = Object.values(q.history).filter(Boolean).length;
+    const completions = q.frequency === "once" ? (q.completed?1:0) : Object.values(q.history).filter(Boolean).length;
     catTotals[cat] = (catTotals[cat]||0) + completions * q.xp;
   });
   let catRows = Object.keys(CATEGORIES).map(key => {
@@ -561,7 +698,7 @@ function renderStats(){
   }).join("");
 
   return `
-    <div class="week-card"><div class="week-title mono">LAST 7 DAYS</div><div class="week-bars">${weekBars}</div></div>
+    <div class="week-card"><div class="week-title mono">LAST 7 DAYS (DAILY QUESTS)</div><div class="week-bars">${weekBars}</div></div>
     <div class="stat-grid">
       <div class="stat-card"><div class="num cinzel">${player.xp}</div><div class="label mono">TOTAL XP</div></div>
       <div class="stat-card"><div class="num cinzel">&#128293; ${bestStreak}</div><div class="label mono">BEST STREAK</div></div>
@@ -601,8 +738,7 @@ function renderSettings(){
     const locked = level < f.level;
     const selected = player.usernameFont === f.family;
     return `<button type="button" class="font-option ${selected?'selected':''} ${locked?'locked':''}" ${locked?'':`data-font="${f.family}"`} data-level="${f.level}" style="font-family:${f.family}">
-      <span>${f.label}</span>
-      <span class="lock-note">${locked ? `&#128274; Lv${f.level}` : (selected ? 'Selected' : '')}</span>
+      <span>${f.label}</span><span class="lock-note">${locked ? `&#128274; Lv${f.level}` : (selected ? 'Selected' : '')}</span>
     </button>`;
   }).join("");
 
@@ -612,36 +748,25 @@ function renderSettings(){
       <div class="settings-note" style="font-size:13px; color:var(--gold);">${titleForLevel(level)}</div>
       ${next ? `<div class="settings-note">Next title "${next.title}" unlocks at Level ${next.level}</div>` : `<div class="settings-note">You've reached the highest title.</div>`}
     </div>
-
     <div class="form-card" style="margin-top:14px;">
       <label>PROFILE PICTURE</label>
       <div class="avatar-row">
         <div class="avatar-lg">${player.avatar ? `<img src="${player.avatar}"/>` : '&#128100;'}</div>
-        <div style="flex:1;">
-          <button class="btn-secondary" id="removeAvatarBtn" style="width:100%;">Remove Photo</button>
-          <div class="settings-note">Tap the avatar in the header to upload a new one.</div>
-        </div>
+        <div style="flex:1;"><button class="btn-secondary" id="removeAvatarBtn" style="width:100%;">Remove Photo</button><div class="settings-note">Tap the avatar in the header to upload a new one.</div></div>
       </div>
     </div>
-
-    <div class="form-card" style="margin-top:14px;">
-      <label>USERNAME FONT</label>
-      <div class="font-grid">${fontRows}</div>
-    </div>
-
+    <div class="form-card" style="margin-top:14px;"><label>USERNAME FONT</label><div class="font-grid">${fontRows}</div></div>
     <div class="form-card" style="margin-top:14px;">
       <label>DEFAULT XP PER CATEGORY</label>
       <div class="settings-note" style="margin-bottom:10px;">New quests in a category auto-fill with its default.</div>
       ${catDefaultRows}
     </div>
-
     <div class="form-card" style="margin-top:14px;">
       <label>USERNAME</label>
       <input type="text" id="usernameInput" value="${player.username.replace(/"/g,'&quot;')}" />
       <div class="settings-note">Changing this moves your guild entry to the new name.</div>
       <div class="form-buttons"><button class="btn-primary" id="saveUsernameBtn" style="flex:1">Save Username</button></div>
     </div>
-
     <div class="form-card" style="margin-top:14px;">
       <label>DANGER ZONE</label>
       <div class="settings-note">Permanently erases your quests, XP, and guild entry on this device. Cannot be undone.</div>
