@@ -100,6 +100,7 @@
   .levelup-box .t1 { color:var(--gold); font-size:20px; font-weight:700; margin:8px 0 4px; }
   .levelup-box .t2 { color:var(--parchment); font-size:13px; }
   .levelup-box .t3 { color:var(--gold-dim); font-size:12px; margin-top:8px; font-style:italic; }
+  .levelup-box .t4 { color:var(--parchment-dim); font-size:11px; margin-top:8px; font-style:italic; line-height:1.4; }
   .empty-note { color:var(--parchment-dim); font-size:13px; text-align:center; padding:24px 0; }
   .danger-btn { width:100%; background:transparent; border:1.5px solid var(--ruby); color:var(--ruby); border-radius:5px; padding:11px; font-size:14px; cursor:pointer; font-family:'Spectral',serif; margin-top:8px; }
   .settings-note { color:var(--parchment-dim); font-size:12px; margin-top:6px; }
@@ -174,15 +175,29 @@ const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
 const DAY_LABELS = {sun:"Sunday", mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday"};
 
 const TITLES = [
-  {level:1, title:"Squire"}, {level:2, title:"Page"}, {level:3, title:"Journeyman"},
-  {level:4, title:"Man-at-Arms"}, {level:5, title:"Knight"}, {level:6, title:"Knight-Errant"},
-  {level:7, title:"Champion"}, {level:8, title:"Baron"}, {level:9, title:"Viscount"},
-  {level:10, title:"Earl"}, {level:11, title:"Marquess"}, {level:12, title:"Duke"},
-  {level:13, title:"Warlord"}, {level:14, title:"Crusader"}, {level:15, title:"Paladin"},
-  {level:16, title:"High Knight"}, {level:17, title:"Lord Commander"}, {level:18, title:"Grand Duke"},
-  {level:19, title:"Archduke"}, {level:20, title:"Sovereign"},
+  {level:1, title:"Squire", desc:"A humble apprentice bound to service, learning discipline through the small tasks of each day."},
+  {level:2, title:"Page", desc:"Once a squire, now trusted with greater duties — the first steps toward true knighthood."},
+  {level:3, title:"Journeyman", desc:"Skilled beyond the basics, wandering from task to task to hone a growing craft."},
+  {level:4, title:"Man-at-Arms", desc:"A seasoned fighter of the realm, reliable in battle and steady in purpose."},
+  {level:5, title:"Knight", desc:"Sworn to honor and duty, a knight's word is their bond and their deeds their legacy."},
+  {level:6, title:"Knight-Errant", desc:"A wandering knight in search of glory, taking on quests wherever they may be found."},
+  {level:7, title:"Champion", desc:"Undefeated in the trials set before them, a champion inspires all who follow."},
+  {level:8, title:"Baron", desc:"A noble landholder whose discipline has earned both title and territory."},
+  {level:9, title:"Viscount", desc:"Rising through the peerage, a viscount balances duty to crown and to self."},
+  {level:10, title:"Earl", desc:"A commanding presence among nobles, ruling their domain with hard-won wisdom."},
+  {level:11, title:"Marquess", desc:"Guardian of the borderlands, ever vigilant against the trials that would break lesser souls."},
+  {level:12, title:"Duke", desc:"Among the highest of nobles, a duke's influence is matched only by their discipline."},
+  {level:13, title:"Warlord", desc:"A feared leader of armies, forged through countless battles and unbroken resolve."},
+  {level:14, title:"Crusader", desc:"Driven by unwavering purpose, a crusader marches onward no matter the cost."},
+  {level:15, title:"Paladin", desc:"A holy warrior whose virtue and strength are beyond question."},
+  {level:16, title:"High Knight", desc:"Elevated above common knighthood, a High Knight commands respect from all who see them."},
+  {level:17, title:"Lord Commander", desc:"Entrusted with leading legions, a Lord Commander's decisions echo through the realm."},
+  {level:18, title:"Grand Duke", desc:"A ruler of great lands and greater ambition, second only to the crown itself."},
+  {level:19, title:"Archduke", desc:"Bearing near-royal authority, an archduke's legacy will be remembered for generations."},
+  {level:20, title:"Sovereign", desc:"The pinnacle of mastery and rule — a sovereign answers to no one but themselves."},
 ];
 function titleForLevel(level){ let c = TITLES[0].title; for (const t of TITLES) { if (level >= t.level) c = t.title; else break; } return c; }
+function descForLevel(level){ let c = TITLES[0].desc; for (const t of TITLES) { if (level >= t.level) c = t.desc; else break; } return c; }
 function nextTitleInfo(level){ return TITLES.find(t => t.level > level) || null; }
 
 const FONT_UNLOCKS = [
@@ -196,8 +211,10 @@ const FONT_UNLOCKS = [
   {level:20, family:"'Almendra SC', serif",            label:"Almendra SC"},
 ];
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
-function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function localDateStr(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function todayStr(){ return localDateStr(new Date()); }
+function daysAgoStr(n){ const d=new Date(); d.setDate(d.getDate()-n); return localDateStr(d); }
 function todayDayKey(){ return DAY_KEYS[new Date().getDay()]; }
 function weekKeyFor(date){
   const d = new Date(date); d.setHours(0,0,0,0);
@@ -213,7 +230,13 @@ function computeStreak(history){
   while(history[cursor]){ streak++; i++; cursor = daysAgoStr(i + (history[todayStr()] ? 0 : 1)); }
   return streak;
 }
-function levelFromXp(xp){ return Math.floor(xp/100)+1; }
+function xpForLevel(level){ return Math.round((100 * Math.pow(1.15, level - 1)) / 5) * 5; }
+function getLevelProgress(xp){
+  let level = 1, remaining = xp;
+  while (remaining >= xpForLevel(level)) { remaining -= xpForLevel(level); level++; }
+  return { level, into: remaining, needed: xpForLevel(level) };
+}
+function levelFromXp(xp){ return getLevelProgress(xp).level; }
 function questPeriodKey(q){ return q.frequency === "weekly" ? todayWeekKey() : todayStr(); }
 function isQuestDone(q){ return q.frequency === "once" ? !!q.completed : !!q.history[questPeriodKey(q)]; }
 
@@ -301,8 +324,10 @@ function render(){
     return;
   }
 
-  const level = levelFromXp(player.xp);
-  const xpIntoLevel = player.xp % 100;
+  const progress = getLevelProgress(player.xp);
+  const level = progress.level;
+  const xpIntoLevel = progress.into;
+  const xpNeeded = progress.needed;
   const title = titleForLevel(level);
 
   let bodyHtml = "";
@@ -338,8 +363,8 @@ function render(){
         </div>
         <div class="lvl cinzel glow">Lv${level}</div>
       </div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${xpIntoLevel}%"></div></div>
-      <div class="xp-label mono">${xpIntoLevel} / 100 XP to Level ${level+1}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, Math.round((xpIntoLevel/xpNeeded)*100))}%"></div></div>
+      <div class="xp-label mono">${xpIntoLevel} / ${xpNeeded} XP to Level ${level+1}</div>
     </div>
     <div class="tabs">
       <button class="tab ${tab==='quests'?'active':''}" data-tab="quests" title="Quests">&#128220;</button>
@@ -746,7 +771,8 @@ function renderSettings(){
     <div class="form-card">
       <label>TITLE</label>
       <div class="settings-note" style="font-size:13px; color:var(--gold);">${titleForLevel(level)}</div>
-      ${next ? `<div class="settings-note">Next title "${next.title}" unlocks at Level ${next.level}</div>` : `<div class="settings-note">You've reached the highest title.</div>`}
+      <div class="settings-note" style="margin-top:6px; font-style:italic;">${descForLevel(level)}</div>
+      ${next ? `<div class="settings-note" style="margin-top:8px;">Next title "${next.title}" unlocks at Level ${next.level}</div>` : `<div class="settings-note" style="margin-top:8px;">You've reached the highest title.</div>`}
     </div>
     <div class="form-card" style="margin-top:14px;">
       <label>PROFILE PICTURE</label>
@@ -793,11 +819,12 @@ async function deleteAccount(){
 
 function showLevelUp(level){
   const title = titleForLevel(level);
+  const desc = descForLevel(level);
   const div = document.createElement("div");
   div.className = "levelup";
-  div.innerHTML = `<div class="levelup-box"><div style="font-size:28px;">&#10024;</div><div class="t1 cinzel">LEVEL UP</div><div class="t2">You reached Level ${level}</div><div class="t3">New title: ${title}</div></div>`;
+  div.innerHTML = `<div class="levelup-box"><div style="font-size:28px;">&#10024;</div><div class="t1 cinzel">LEVEL UP</div><div class="t2">You reached Level ${level}</div><div class="t3">New title: ${title}</div><div class="t4">${desc}</div></div>`;
   document.body.appendChild(div);
-  setTimeout(()=>div.remove(), 2000);
+  setTimeout(()=>div.remove(), 3200);
 }
 
 render();
